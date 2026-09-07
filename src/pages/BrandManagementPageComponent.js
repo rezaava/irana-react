@@ -2,78 +2,136 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FaPlus, FaEdit, FaTrashAlt } from "react-icons/fa";
 import GenericTable from "./GenericTableComponent";
+import AuthCheck from "./AuthCheckComponent";
 
-// داده‌ی نمونه — در پروژه‌ی واقعی از API می‌آید
-const SAMPLE_BRANDS = [
-  { id: 1, name: "سامسونگ_SAMSUNG" },
-  { id: 2, name: "الجی_LG" },
-  { id: 3, name: "جنرال الکتریک_GE" },
-  { id: 4, name: "دوو_DAEWOO" },
-  { id: 5, name: "اسنوا_SNOWA" },
-  { id: 6, name: "بوش_BOSCH" },
-  { id: 7, name: "وستینگ هوس_WESTINGHOUSE" },
-  { id: 8, name: "مابه_MABE" },
-  { id: 9, name: "بکو_BEKO" },
-  { id: 10, name: "بلومبرگ_BLOOMBERG" },
-  { id: 11, name: "آرچلیک_ARCHELIK" },
-  { id: 12, name: "کنوود_KENWOOD" },
-  { id: 13, name: "آاگ_AEG" },
-  { id: 14, name: "آمانا_Amana" },
-  { id: 15, name: "امرسان_Emersun" },
-  { id: 16, name: "فریجیدر_Frigidaire" },
-  { id: 17, name: "ایرانی ها_Irani" },
-];
+const API_URL = "https://iranaserviceapp.ir/test/api";
 
-// صفحه‌ی مدیریت برند دستگاه
-// دکمه‌ی + و دکمه‌ی ویرایش هر دو Link هستن و روت رو عوض می‌کنن
-// (/brands/add و /brands/:id/edit)
 class BrandManagementPage extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { brands: SAMPLE_BRANDS };
-    this.handleDelete = this.handleDelete.bind(this);
+
+    this.state = {
+      brands: [],
+      loading: true,
+      authenticated: false,
+    };
   }
 
-  handleDelete(id) {
-    // TODO: قبل از حذف از state، باید API حذف صدا زده بشه
-    // مثال:
-    // await api.deleteBrand(id);
-    this.setState((prev) => ({
-      brands: prev.brands.filter((b) => b.id !== id),
-    }));
+  componentDidMount() {
+    if (!AuthCheck()) {
+      return;
+    }
+
+    this.setState({
+      authenticated: true,
+    });
+
+    this.getBrands();
   }
+
+  getBrands = () => {
+    const token = localStorage.getItem("token");
+
+    fetch(`${API_URL}/list-type`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("LIST BRAND:", data);
+
+        this.setState({
+          brands: data.brands || [],
+          loading: false,
+        });
+      })
+      .catch((error) => {
+        console.error("GET BRANDS ERROR:", error);
+
+        this.setState({
+          loading: false,
+        });
+      });
+  };
+
+  handleDelete = (id) => {
+    const token = localStorage.getItem("token");
+
+    fetch(`${API_URL}/delete-brand`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        brand_id: id,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("DELETE BRAND:", data);
+
+        this.getBrands();
+      })
+      .catch((error) => {
+        console.error("DELETE BRAND ERROR:", error);
+      });
+  };
 
   render() {
-    const { brands } = this.state;
+    if (!this.state.authenticated) {
+      return null;
+    }
+
+    const { brands, loading } = this.state;
 
     const columns = [
-      { key: "name", label: "نام", headerClassName: "text-dark" },
+      {
+        key: "name",
+        label: "نام",
+        headerClassName: "text-dark",
+      },
+
       {
         key: "edit",
         label: "ویرایش",
         width: "0.6fr",
         headerClassName: "text-primary",
+
         render: (row) => (
           <Link
             to={`/brands/${row.id}/edit`}
+            state={{ name: row.name }}
             className="btn btn-light border-0 p-1 d-inline-flex"
           >
-            <FaEdit className="text-secondary" size={18} />
+            <FaEdit
+              className="text-secondary"
+              size={18}
+            />
           </Link>
         ),
       },
+
       {
         key: "delete",
         label: "حذف",
         width: "0.6fr",
         headerClassName: "text-primary",
+
         render: (row) => (
           <button
             type="button"
             onClick={() => this.handleDelete(row.id)}
             className="btn btn-light border-0 p-1"
           >
-            <FaTrashAlt style={{ color: "#f08a72" }} size={17} />
+            <FaTrashAlt
+              style={{ color: "#f08a72" }}
+              size={17}
+            />
           </button>
         ),
       },
@@ -82,18 +140,36 @@ class BrandManagementPage extends React.Component {
     return (
       <div>
         <div className="container px-3 pt-4 pb-5">
+
           <div className="d-flex align-items-center justify-content-between mb-4">
-            <h1 className="fs-6 fw-semibold text-dark m-0">مدیریت برند دستگاه</h1>
+            <h1 className="fs-6 fw-semibold text-dark m-0">
+              مدیریت برند دستگاه
+            </h1>
+
             <Link
               to="/brands/add"
               className="btn btn-light rounded-circle border p-2 d-flex align-items-center justify-content-center"
-              style={{ width: 40, height: 40, transition: "background-color 0.15s ease" }}
+              style={{
+                width: 40,
+                height: 40,
+                transition: "background-color 0.15s ease",
+              }}
             >
               <FaPlus size={16} />
             </Link>
           </div>
 
-          <GenericTable columns={columns} rows={brands} />
+          {loading ? (
+            <div className="text-center py-5">
+              در حال دریافت اطلاعات...
+            </div>
+          ) : (
+            <GenericTable
+              columns={columns}
+              rows={brands}
+            />
+          )}
+
         </div>
       </div>
     );

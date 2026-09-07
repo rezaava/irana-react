@@ -1,63 +1,127 @@
 import React from "react";
 import { FaSearch, FaSlidersH } from "react-icons/fa";
 import GenericTable from "./GenericTableComponent";
+import AuthCheck from "./AuthCheckComponent";
 
-// داده‌ی نمونه — در پروژه‌ی واقعی از API می‌آید
-const SAMPLE_SETTLEMENTS = [
-  { id: 1, technicianName: "امیر عبادی لکلر", invoiceTotal: "2,275,000" },
-  { id: 2, technicianName: "امیر عبادی لکلر", invoiceTotal: "2,500,000" },
-  { id: 3, technicianName: "علی عبداللهی", invoiceTotal: "12,000,000" },
-  { id: 4, technicianName: "مهرشاد نجفی", invoiceTotal: "4,500,000" },
-  { id: 5, technicianName: "پارسا پورحبیبی", invoiceTotal: "6,500,000" },
-  { id: 6, technicianName: "مهرشاد نجفی", invoiceTotal: "3,000,000" },
-  { id: 7, technicianName: "علی عبداللهی", invoiceTotal: "5,000,000" },
-  { id: 8, technicianName: "علی عبداللهی", invoiceTotal: "10,375,000" },
-  { id: 9, technicianName: "علی عبداللهی", invoiceTotal: "3,500,000" },
-  { id: 10, technicianName: "علی عبداللهی", invoiceTotal: "9,650,000" },
-];
+const API_URL = "https://iranaserviceapp.ir/test/api";
 
-// صفحه‌ی درخواست‌های تسویه
 class SettlementRequestsPage extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
-      settlements: SAMPLE_SETTLEMENTS,
+      settlements: [],
       searchTerm: "",
+      loading: true,
+      authenticated: false,
     };
-    this.handleSearchChange = this.handleSearchChange.bind(this);
   }
 
-  handleSearchChange(e) {
-    this.setState({ searchTerm: e.target.value });
+  componentDidMount() {
+    if (!AuthCheck()) {
+      return;
+    }
+
+    this.setState({
+      authenticated: true,
+    });
+
+    this.getSettlements();
   }
+
+  getSettlements = () => {
+    const token = localStorage.getItem("token");
+
+    fetch(`${API_URL}/clear`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("CLEAR:", data);
+
+        this.setState({
+          settlements: data.clears || [],
+          loading: false,
+        });
+      })
+      .catch((error) => {
+        console.error("GET CLEAR ERROR:", error);
+
+        this.setState({
+          loading: false,
+        });
+      });
+  };
+
+  handleSearchChange = (e) => {
+    this.setState({
+      searchTerm: e.target.value,
+    });
+  };
 
   render() {
-    const { settlements, searchTerm } = this.state;
+    if (!this.state.authenticated) {
+      return null;
+    }
 
-    const filtered = settlements.filter((s) =>
-      s.technicianName.includes(searchTerm.trim())
-    );
+    const {
+      settlements,
+      searchTerm,
+      loading,
+    } = this.state;
+
+    const search = searchTerm.trim();
+
+    const filtered = settlements.filter((item) => {
+      const fullName = `${item.user?.name || ""} ${
+        item.user?.family || ""
+      }`;
+
+      return fullName.includes(search);
+    });
 
     const columns = [
-      { key: "technicianName", label: "نام تعمیرکار", headerClassName: "text-primary" },
+      {
+        key: "technicianName",
+        label: "نام تعمیرکار",
+        headerClassName: "text-primary",
+
+        render: (row) => (
+          <span className="text-dark">
+            {row.user?.name || ""} {row.user?.family || ""}
+          </span>
+        ),
+      },
+
       {
         key: "invoiceTotal",
         label: "جمع فاکتور ها",
         headerClassName: "text-primary",
+
         render: (row) => (
-          <span className="small text-dark">{row.invoiceTotal} تومان</span>
+          <span className="small text-dark">
+            {Number(row.sum || 0).toLocaleString("fa-IR")} تومان
+          </span>
         ),
       },
+
       {
         key: "details",
         label: "جزئیات",
         width: "0.6fr",
         headerClassName: "text-primary",
+
         render: () => (
           <FaSlidersH
             className="text-secondary mx-auto"
             size={14}
-            style={{ transform: "rotate(90deg)" }}
+            style={{
+              transform: "rotate(90deg)",
+            }}
           />
         ),
       },
@@ -65,8 +129,10 @@ class SettlementRequestsPage extends React.Component {
 
     return (
       <div>
-        <div className="container px-3 pt-4 pb-5" style={{ maxWidth: 480 }}>
-          {/* جستجو */}
+        <div
+          className="container px-3 pt-4 pb-5"
+          style={{ maxWidth: 480 }}
+        >
           <div className="d-flex align-items-center gap-2 border rounded-pill px-3 py-2 mb-3 bg-white">
             <input
               type="text"
@@ -75,14 +141,24 @@ class SettlementRequestsPage extends React.Component {
               onChange={this.handleSearchChange}
               className="form-control border-0 shadow-none text-end p-0"
             />
-            <FaSearch className="text-secondary" size={16} />
+
+            <FaSearch
+              className="text-secondary"
+              size={16}
+            />
           </div>
 
-          <GenericTable
-            columns={columns}
-            rows={filtered}
-            getRowLink={(row) => `/settlements/${row.id}`}
-          />
+          {loading ? (
+            <div className="text-center text-muted py-5">
+              در حال دریافت اطلاعات...
+            </div>
+          ) : (
+            <GenericTable
+              columns={columns}
+              rows={filtered}
+              getRowLink={(row) => `/settlements/${row.id}`}
+            />
+          )}
         </div>
       </div>
     );

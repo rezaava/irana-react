@@ -1,5 +1,4 @@
 import React from "react";
-import { FaChevronLeft } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 class RequestRecords extends React.Component {
@@ -19,14 +18,19 @@ class RequestRecords extends React.Component {
             "recordsFade .4s ease",
         }}
       >
+
         {/* Header */}
+
         <div
           className="d-grid text-center py-4"
           style={{
             gridTemplateColumns:
               "1.2fr 1.2fr 1.2fr 1.2fr",
+
             background: "#f5f5f5",
+
             color: "#4e3c9b",
+
             fontSize: "14px",
           }}
         >
@@ -36,79 +40,117 @@ class RequestRecords extends React.Component {
           <div>برند دستگاه</div>
         </div>
 
-        {records.map((record, index) => (
-          <Link
-            key={record.id}
-            to={`/request-details/${record.id}`}
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-              display: "block",
-            }}
-          >
-            <div
-              className="d-grid text-center align-items-center"
+        {/* Records */}
+
+        {records.map(
+          (record, index) => (
+            <Link
+              key={record.id}
+              to={`/request-details/${record.id}`}
               style={{
-                gridTemplateColumns: "1.2fr 1.2fr 1.2fr 1.2fr",
-                minHeight: "78px",
-                borderBottom:
-                  index !== records.length - 1
-                    ? "1px solid #f4f4f4"
-                    : "none",
-                fontSize: "14px",
-                transition: "background .25s ease",
+                textDecoration:
+                  "none",
+
+                color: "inherit",
+
+                display: "block",
               }}
             >
-              <div>{record.customerName}</div>
-              <div>{record.deviceType}</div>
-              <div>{record.deviceBrand}</div>
-              <div>{record.technician}</div>
-            </div>
-          </Link>
-        ))}
+              <div
+                className="d-grid text-center align-items-center"
+                style={{
+                  gridTemplateColumns:
+                    "1.2fr 1.2fr 1.2fr 1.2fr",
+
+                  minHeight: "78px",
+
+                  borderBottom:
+                    index !==
+                    records.length - 1
+                      ? "1px solid #f4f4f4"
+                      : "none",
+
+                  fontSize: "14px",
+
+                  transition:
+                    "background .25s ease",
+                }}
+              >
+                <div>
+                  {record.customerName}
+                </div>
+                <div>
+                  {record.deviceType}
+                </div>
+
+                <div>
+                  {record.problem}
+                </div>
+
+                <div>
+                  {record.deviceBrand}
+                </div>
+              </div>
+            </Link>
+          )
+        )}
       </div>
     );
   };
 
-  renderCard = (record, index) => {
+  // =========================================================
+  // Card
+  // =========================================================
+
+  renderCard = (
+    record,
+    index
+  ) => {
     return (
       <div
         key={record.id}
         className="bg-white rounded-4 p-3"
         style={{
-          border: "1px solid #eeeeee",
+          border:
+            "1px solid #eeeeee",
+
           boxShadow:
             "0 2px 6px rgba(0,0,0,.08)",
+
           animation:
-            `cardFade .4s ease ${index * 0.06}s both`,
+            `cardFade .4s ease ${
+              index * 0.06
+            }s both`,
+
           transition:
             "transform .25s ease, box-shadow .25s ease",
         }}
       >
-        {/* Customer / technician */}
+
+        {/* Technician */}
+
         <div
           className="d-flex justify-content-between align-items-center mb-3"
         >
-          <div>
-            <strong
-              style={{
-                fontSize: "15px",
-              }}
-            >
-              تعمیرکار
-            </strong>
-          </div>
+          <strong
+            style={{
+              fontSize: "14px",
+            }}
+          >
+            تعمیرکار
+          </strong>
 
-          <div
+          <span
             style={{
               fontSize: "14px",
             }}
           >
             {record.technician}
-          </div>
+          </span>
         </div>
 
-        {/* Device type */}
+        {/* Device */}
+
         <div
           className="d-flex justify-content-between align-items-center mb-3"
         >
@@ -130,6 +172,7 @@ class RequestRecords extends React.Component {
         </div>
 
         {/* Problem */}
+
         <div
           className="d-flex justify-content-between align-items-center mb-3"
         >
@@ -146,28 +189,38 @@ class RequestRecords extends React.Component {
               fontSize: "14px",
             }}
           >
-            {record.deviceBrand}
+            {record.problem}
           </span>
         </div>
+
+        {/* Details */}
+
         <Link
-          type="button"
           className="btn w-100 rounded-pill"
           style={{
             height: "50px",
+
             color: "#6389c8",
+
             border:
               "1px solid #6389c8",
+
             background: "#fff",
+
             transition:
               "all .25s ease",
           }}
-          to={`/request-details/1`}
-          >
-            دیدن جزئیات
+          to={`/request-details/${record.id}`}
+        >
+          دیدن جزئیات
         </Link>
       </div>
     );
   };
+
+  // =========================================================
+  // Cards
+  // =========================================================
 
   renderCards = () => {
     const { records } = this.props;
@@ -184,20 +237,26 @@ class RequestRecords extends React.Component {
             "recordsFade .4s ease",
         }}
       >
-        {records.map((record, index) => (
-          <div
-            key={record.id}
-            className="col-6"
-          >
-            {this.renderCard(
-              record,
-              index
-            )}
-          </div>
-        ))}
+        {records.map(
+          (record, index) => (
+            <div
+              key={record.id}
+              className="col-6"
+            >
+              {this.renderCard(
+                record,
+                index
+              )}
+            </div>
+          )
+        )}
       </div>
     );
   };
+
+  // =========================================================
+  // Empty
+  // =========================================================
 
   renderEmpty = () => {
     return (
@@ -213,11 +272,17 @@ class RequestRecords extends React.Component {
     );
   };
 
+  // =========================================================
+  // Render
+  // =========================================================
+
   render() {
-    const { viewMode } = this.props;
+    const { viewMode } =
+      this.props;
 
     return (
       <div className="mt-2">
+
         {viewMode === "list"
           ? this.renderList()
           : this.renderCards()}
@@ -249,6 +314,7 @@ class RequestRecords extends React.Component {
             }
           `}
         </style>
+
       </div>
     );
   }
