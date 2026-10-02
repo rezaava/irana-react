@@ -2,6 +2,7 @@ import React from "react";
 import { FaChevronLeft } from "react-icons/fa";
 import withRouter from "./withRouter";
 import AuthCheck from "./AuthCheckComponent";
+import Loader from "./LoaderComponent";
 
 const API_URL = "https://iranaserviceapp.ir/test/api";
 
@@ -34,29 +35,29 @@ class NotificationDetailPage extends React.Component {
     const { id } = this.props.params;
     const token = localStorage.getItem("token");
 
-  fetch(`${API_URL}/ano?id=${id}`, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("ANO:", data);
-
-      this.setState({
-        notification: data.ano || data.anos || null,
-        loading: false,
-      });
+    fetch(`${API_URL}/ano?id=${id}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     })
-    .catch((error) => {
-      console.error("GET ANO ERROR:", error);
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("ANO:", data);
 
-      this.setState({
-        loading: false,
+        this.setState({
+          notification: data.ano || data.anos || null,
+          loading: false,
+        });
+      })
+      .catch((error) => {
+        console.error("GET ANO ERROR:", error);
+
+        this.setState({
+          loading: false,
+        });
       });
-    });
   };
 
   handleBack() {
@@ -71,11 +72,7 @@ class NotificationDetailPage extends React.Component {
     const { notification, loading } = this.state;
 
     if (loading) {
-      return (
-        <div className="text-center text-muted py-5">
-          در حال دریافت اطلاعات...
-        </div>
-      );
+      return <Loader />;
     }
 
     if (!notification) {
@@ -90,9 +87,7 @@ class NotificationDetailPage extends React.Component {
       <div>
         <div
           className="container px-3 pt-4 pb-5"
-          style={{ maxWidth: 480 }}
         >
-
           <div className="d-flex align-items-start justify-content-between mb-3">
             <div>
               <div className="text-dark fw-semibold">
@@ -146,7 +141,6 @@ class NotificationDetailPage extends React.Component {
           >
             {notification.text}
           </p>
-
         </div>
       </div>
     );

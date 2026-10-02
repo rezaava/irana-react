@@ -16,17 +16,18 @@
      0 0 0 3px rgba(13, 110, 253, 0.08),
      0 4px 12px rgba(13, 110, 253, 0.06);
 }
- .custom-icon {
-   width: 38px;
-   height: 38px;
-   min-width: 38px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   background: #e0e0e6;
-   border-radius: 10px;
-   margin-left: 10px;
-   font-size: 15px;
+.custom-icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3aa7ff;
+  border-radius: 10px;
+  margin-left: 10px;
+  font-size: 15px;
+  color: #ffffff;
 }
  .custom-input input,
  .custom-input select {
@@ -51,6 +52,7 @@
  .custom-input select:invalid {
    color: #9ca3af;
  }
- .btn-sub {
-   background: #939394;
- }
+.btn-sub {
+  background: #42a5f5;
+  color: #ffffff;
+}

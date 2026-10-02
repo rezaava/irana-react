@@ -28,6 +28,9 @@ import BrandEditPage from './pages/BrandEditPageComponent';
 import DeviceTypeEditPage from './pages/DeviceTypeEditPageComponent';
 import SpecialtyEditPage from './pages/SpecialtyEditPageComponent';
 import NotificationAddPage from './pages/NotificationAddPageComponent';
+import ProfileChangeRequestsPage from './pages/ProfileChangeRequestsPage';
+import PersonalInfoPageComponenet from './pages/PersonalInfoPageComponenet';
+import ChatPage from './pages/ChatPageComponent';
 
 function App() {
   return (
@@ -42,13 +45,13 @@ function App() {
         <Route path="/form" element={<Form />} />
         <Route path="/technician" element={<TechniciansPage />} />
 
-        <Route path="/profile" element={<TechnicianProfilePage />} />
+        <Route path="/profile/:id" element={<TechnicianProfilePage />} />
 
 
         <Route path="/request-details/:id" element={<RequestDetails />} />
 
 
-        <Route path="/PersonalInfoPage" element={<PersonalInfoPage />} />
+        <Route path="/PersonalInfoPage/:id" element={<PersonalInfoPage />} />
 
         <Route path="/request" element={<RequestsPage />} />
 
@@ -62,7 +65,8 @@ function App() {
 
         <Route path="/settlements" element={<SettlementRequestsPage />} />
         <Route path="/settlements/:id" element={<SettlementDetailPage />} />
-        <Route path="/profile-edit-requests" element={<profile />} />
+        <Route path="/profile-edit-requests" element={<ProfileChangeRequestsPage />} />
+        <Route path="/profile-edit-requests/:id" element={<PersonalInfoPageComponenet pendingMode />} />
 
         <Route path="/reports" element={<RequestsReportForm />} />
         <Route path="/notifications" element={<NotificationsPage />} />
@@ -72,16 +76,15 @@ function App() {
         <Route path="/specialties" element={<SpecialtyManagementPage />} />
         <Route path="/specialties/add" element={<SpecialtyAddPageComponent />} />
 
+        <Route path="/brands/:id/edit" element={<BrandEditPage />} />
 
-<Route path="/brands/:id/edit" element={<BrandEditPage />} />
+        <Route path="/device-types/:id/edit" element={<DeviceTypeEditPage />} />
 
-<Route path="/device-types/:id/edit" element={<DeviceTypeEditPage />} />
+        <Route path="/specialties/:id/edit" element={<SpecialtyEditPage />} />
 
-<Route path="/specialties/:id/edit" element={<SpecialtyEditPage />} />
+        <Route path="/notifications/add" element={<NotificationAddPage />} />
 
-<Route path="/notifications/add" element={<NotificationAddPage />} />
-
-
+        <Route path="/chat/:id" element={<ChatPage />} />
       </Routes>
       <Nav/>
 

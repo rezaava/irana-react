@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FaPlus, FaEdit, FaTrashAlt } from "react-icons/fa";
 import GenericTable from "./GenericTableComponent";
 import AuthCheck from "./AuthCheckComponent";
+import Loader from "./LoaderComponent";
 
 const API_URL = "https://iranaserviceapp.ir/test/api";
 
@@ -161,16 +162,7 @@ class DeviceTypeManagementPage extends React.Component {
             </Link>
           </div>
 
-          {loading ? (
-            <div className="text-center py-5">
-              در حال دریافت اطلاعات...
-            </div>
-          ) : (
-            <GenericTable
-              columns={columns}
-              rows={deviceTypes}
-            />
-          )}
+          {loading ? <Loader /> : <GenericTable columns={columns} rows={deviceTypes} />}
 
         </div>
       </div>

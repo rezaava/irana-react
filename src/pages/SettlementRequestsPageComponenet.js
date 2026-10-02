@@ -2,6 +2,7 @@ import React from "react";
 import { FaSearch, FaSlidersH } from "react-icons/fa";
 import GenericTable from "./GenericTableComponent";
 import AuthCheck from "./AuthCheckComponent";
+import Loader from "./LoaderComponent";
 
 const API_URL = "https://iranaserviceapp.ir/test/api";
 
@@ -68,11 +69,7 @@ class SettlementRequestsPage extends React.Component {
       return null;
     }
 
-    const {
-      settlements,
-      searchTerm,
-      loading,
-    } = this.state;
+    const { settlements, searchTerm, loading } = this.state;
 
     const search = searchTerm.trim();
 
@@ -142,16 +139,11 @@ class SettlementRequestsPage extends React.Component {
               className="form-control border-0 shadow-none text-end p-0"
             />
 
-            <FaSearch
-              className="text-secondary"
-              size={16}
-            />
+            <FaSearch className="text-secondary" size={16} />
           </div>
 
           {loading ? (
-            <div className="text-center text-muted py-5">
-              در حال دریافت اطلاعات...
-            </div>
+            <Loader /> // ← تغییر کرد
           ) : (
             <GenericTable
               columns={columns}

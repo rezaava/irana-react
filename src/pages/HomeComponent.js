@@ -424,7 +424,7 @@ class Home extends React.Component {
 
         <div className="card shadow-sm border-0 mb-4">
 
-          <div className="card-body p-4">
+          <div className="card-body p-4 min-h-50">
 
             <h4 className="h6 fw-bold text-center mb-2">
               شهرهای پر درخواست
@@ -517,11 +517,11 @@ class Home extends React.Component {
                           }
                         >
 
-                          <td className="number-circle">
-                            {index + 1}
-                          </td>
 
                           <td className="text-end">
+                            <spam className="ms-3">
+                              {index + 1}
+                            </spam>
                             {this.getStateName(
                               city
                             )}
@@ -548,7 +548,7 @@ class Home extends React.Component {
 
         <div className="card shadow-sm border-0">
 
-          <div className="card-body p-4">
+          <div className="card-body p-4 min-h-50">
 
             <h4 className="h6 fw-bold text-center mb-2">
               فعال ترین تعمیرکاران

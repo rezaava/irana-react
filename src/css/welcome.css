@@ -16,6 +16,9 @@ nav {
 .welcome-box {
   width: 100%;
 }
+.welcome-img {
+  width: 100%;
+}
 
 /* تصویر ثابت در گوشه بالا چپ */
 .fixed-top-left {
@@ -24,5 +27,4 @@ nav {
   left: 20px;
   width: 60px;
   z-index: 1050;
-  opacity: 0.9;
 }

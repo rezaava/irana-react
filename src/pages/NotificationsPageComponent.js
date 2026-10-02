@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FaPlus } from "react-icons/fa";
 import NotificationCard from "./NotificationsCardComponent";
 import AuthCheck from "./AuthCheckComponent";
+import Loader from "./LoaderComponent";
 
 const API_URL = "https://iranaserviceapp.ir/test/api";
 
@@ -28,13 +29,14 @@ class NotificationsPage extends React.Component {
 
     this.getNotifications();
   }
+
   handleDeleteNotification = (id) => {
-  this.setState((prevState) => ({
-    notifications: prevState.notifications.filter(
-      (notification) => notification.id !== id
-    ),
-  }));
-};
+    this.setState((prevState) => ({
+      notifications: prevState.notifications.filter(
+        (notification) => notification.id !== id
+      ),
+    }));
+  };
 
   getNotifications = () => {
     const token = localStorage.getItem("token");
@@ -94,9 +96,7 @@ class NotificationsPage extends React.Component {
           </div>
 
           {loading ? (
-            <div className="text-center text-muted py-5">
-              در حال دریافت اطلاعات...
-            </div>
+            <Loader />
           ) : notifications.length === 0 ? (
             <div className="text-center text-muted py-5">
               اطلاعیه‌ای برای نمایش وجود ندارد.

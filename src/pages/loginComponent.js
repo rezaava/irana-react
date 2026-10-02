@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "../css/login.module.css";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FaPhoneAlt, FaArrowRight, FaKey } from "react-icons/fa";
 
 class Login extends React.Component {
@@ -8,8 +8,9 @@ class Login extends React.Component {
         super(props);
 
         this.state = {
-            step: "phone", // phone | code
+            step: "phone",
             phone: "",
+            id: "",
             phoneError: "",
             code: "",
             codeError: "",
@@ -66,6 +67,7 @@ class Login extends React.Component {
         }
 
         this.setState({
+            phone: cleanPhone,
             phoneError: "",
             loading: true,
         });
@@ -94,10 +96,31 @@ class Login extends React.Component {
                     );
                 }
 
+                // =========================
+                // گرفتن ID کاربر از API
+                // =========================
+                const userId =
+                    result.data?.id ||
+                    result.data?.user_id ||
+                    result.data?.data?.id ||
+                    result.data?.data?.user_id ||
+                    result.data?.user?.id ||
+                    result.data?.data?.user?.id;
+
+                if (!userId) {
+                    console.error("User ID پیدا نشد:", result.data);
+
+                    throw new Error(
+                        "شناسه کاربر از سرور دریافت نشد"
+                    );
+                }
+
                 this.setState(
                     {
                         step: "code",
                         loading: false,
+                        phone: cleanPhone,
+                        id: userId,
                         code: "",
                         codeError: "",
                     },
@@ -112,7 +135,8 @@ class Login extends React.Component {
                 this.setState({
                     loading: false,
                     phoneError:
-                        error.message || "خطایی در ارتباط با سرور رخ داد",
+                        error.message ||
+                        "خطایی در ارتباط با سرور رخ داد",
                 });
             });
     };
@@ -165,16 +189,11 @@ class Login extends React.Component {
             .then((result) => {
                 if (!result.ok) {
                     throw new Error(
-                        result.data?.message || "کد وارد شده صحیح نیست"
+                        result.data?.message ||
+                            "کد وارد شده صحیح نیست"
                     );
                 }
 
-                /*
-                 * بسته به ساختار API ممکن است token
-                 * مستقیماً داخل response باشد یا داخل data.
-                 *
-                 * این قسمت چند حالت رایج را پوشش می‌دهد.
-                 */
                 const token =
                     result.data?.token ||
                     result.data?.access_token ||
@@ -182,36 +201,46 @@ class Login extends React.Component {
                     result.data?.data?.access_token;
 
                 if (!token) {
-                    console.error("Token پیدا نشد:", result.data);
+                    console.error(
+                        "Token پیدا نشد:",
+                        result.data
+                    );
 
                     throw new Error(
-                        "کد ورود اشتباه هست "
+                        "کد ورود اشتباه هست"
                     );
                 }
 
-                // ذخیره توکن
+                // =========================
+                // ذخیره اطلاعات
+                // =========================
                 localStorage.setItem("token", token);
-
-                // ذخیره شماره موبایل برای استفاده احتمالی در برنامه
-                localStorage.setItem("mobile", this.state.phone);
+                localStorage.setItem(
+                    "mobile",
+                    this.state.phone
+                );
+                localStorage.setItem(
+                    "user_id",
+                    this.state.id
+                );
 
                 this.setState({
                     loading: false,
                 });
 
-                /*
-                 * بعد از لاگین موفق
-                 * انتقال به صفحه اصلی
-                 */
                 window.location.href = "/";
             })
             .catch((error) => {
-                console.error("Check code error:", error);
+                console.error(
+                    "Check code error:",
+                    error
+                );
 
                 this.setState({
                     loading: false,
                     codeError:
-                        error.message || "خطایی در ارتباط با سرور رخ داد",
+                        error.message ||
+                        "خطایی در ارتباط با سرور رخ داد",
                 });
             });
     };
@@ -229,7 +258,7 @@ class Login extends React.Component {
     };
 
     // =========================
-    // خروج از مرحله کد
+    // بازگشت به شماره
     // =========================
     handleBackToPhone = () => {
         this.setState({
@@ -242,7 +271,10 @@ class Login extends React.Component {
     render() {
         return (
             <main className="container mt-4 pt-5">
-                <Link to="/welcome/" className={styles["back-link"]}>
+                <Link
+                    to="/welcome/"
+                    className={styles["back-link"]}
+                >
                     <FaArrowRight size={18} />
                 </Link>
 
@@ -252,28 +284,31 @@ class Login extends React.Component {
                     >
                         <div className={styles["welcome-box"]}>
                             <img
-                                src="../img/aaa.png"
+                                src="../img/login.png"
                                 alt="logo"
                                 className={styles["img-box"]}
                             />
 
-                            {/* =========================
-                                مرحله اول: شماره موبایل
-                            ========================= */}
                             {this.state.step === "phone" ? (
                                 <div className="mt-5">
                                     <form
                                         className="mt-4"
-                                        onSubmit={this.handlePhoneSubmit}
+                                        onSubmit={
+                                            this.handlePhoneSubmit
+                                        }
                                     >
                                         <div
                                             className={
-                                                styles["custom-floating"]
+                                                styles[
+                                                    "custom-floating"
+                                                ]
                                             }
                                         >
                                             <FaPhoneAlt
                                                 className={
-                                                    styles["custom-icon"]
+                                                    styles[
+                                                        "custom-icon"
+                                                    ]
                                                 }
                                             />
 
@@ -281,19 +316,28 @@ class Login extends React.Component {
                                                 type="tel"
                                                 id="phone"
                                                 className={`${styles["custom-input"]} ${
-                                                    this.state.phoneError
+                                                    this.state
+                                                        .phoneError
                                                         ? "is-invalid"
                                                         : ""
                                                 }`}
                                                 placeholder=" "
                                                 dir="rtl"
-                                                value={this.state.phone}
-                                                ref={this.phoneRef}
-                                                disabled={this.state.loading}
+                                                value={
+                                                    this.state.phone
+                                                }
+                                                ref={
+                                                    this.phoneRef
+                                                }
+                                                disabled={
+                                                    this.state.loading
+                                                }
                                                 onChange={(e) => {
                                                     this.setState({
-                                                        phone: e.target.value,
-                                                        phoneError: "",
+                                                        phone: e.target
+                                                            .value,
+                                                        phoneError:
+                                                            "",
                                                     });
                                                 }}
                                             />
@@ -301,7 +345,9 @@ class Login extends React.Component {
                                             <label
                                                 htmlFor="phone"
                                                 className={
-                                                    styles["custom-label"]
+                                                    styles[
+                                                        "custom-label"
+                                                    ]
                                                 }
                                             >
                                                 شماره موبایل
@@ -312,17 +358,28 @@ class Login extends React.Component {
                                             <div
                                                 className={`${styles["text-danger"]} ${styles["text-end"]} ${styles["small"]} ${styles["mt-1"]}`}
                                             >
-                                                {this.state.phoneError}
+                                                {
+                                                    this.state
+                                                        .phoneError
+                                                }
                                             </div>
                                         )}
 
-                                        <div className={styles["group-btn"]}>
+                                        <div
+                                            className={
+                                                styles["group-btn"]
+                                            }
+                                        >
                                             <button
                                                 type="submit"
                                                 className={
-                                                    styles["custom-btn"]
+                                                    styles[
+                                                        "custom-btn"
+                                                    ]
                                                 }
-                                                disabled={this.state.loading}
+                                                disabled={
+                                                    this.state.loading
+                                                }
                                             >
                                                 {this.state.loading
                                                     ? "در حال ارسال..."
@@ -332,19 +389,24 @@ class Login extends React.Component {
                                     </form>
                                 </div>
                             ) : (
-                                /* =========================
-                                   مرحله دوم: کد تایید
-                                ========================= */
                                 <div className="mt-5">
-                                    <form onSubmit={this.handleCodeSubmit}>
+                                    <form
+                                        onSubmit={
+                                            this.handleCodeSubmit
+                                        }
+                                    >
                                         <div
                                             className={
-                                                styles["custom-floating"]
+                                                styles[
+                                                    "custom-floating"
+                                                ]
                                             }
                                         >
                                             <FaKey
                                                 className={
-                                                    styles["custom-icon"]
+                                                    styles[
+                                                        "custom-icon"
+                                                    ]
                                                 }
                                             />
 
@@ -352,25 +414,35 @@ class Login extends React.Component {
                                                 type="text"
                                                 id="code"
                                                 className={`${styles["custom-input"]} ${
-                                                    this.state.codeError
+                                                    this.state
+                                                        .codeError
                                                         ? "is-invalid"
                                                         : ""
                                                 }`}
                                                 placeholder=" "
                                                 dir="ltr"
-                                                ref={this.codeRef}
-                                                value={this.state.code}
+                                                ref={
+                                                    this.codeRef
+                                                }
+                                                value={
+                                                    this.state.code
+                                                }
                                                 onChange={
-                                                    this.handleCodeChange
+                                                    this
+                                                        .handleCodeChange
                                                 }
                                                 maxLength="4"
-                                                disabled={this.state.loading}
+                                                disabled={
+                                                    this.state.loading
+                                                }
                                             />
 
                                             <label
                                                 htmlFor="code"
                                                 className={
-                                                    styles["custom-label"]
+                                                    styles[
+                                                        "custom-label"
+                                                    ]
                                                 }
                                             >
                                                 کد تأیید
@@ -381,14 +453,23 @@ class Login extends React.Component {
                                             <div
                                                 className={`${styles["text-danger"]} ${styles["text-end"]} ${styles["small"]} ${styles["mt-1"]}`}
                                             >
-                                                {this.state.codeError}
+                                                {
+                                                    this.state
+                                                        .codeError
+                                                }
                                             </div>
                                         )}
 
                                         <button
                                             type="submit"
-                                            className={styles["custom-btn"]}
-                                            disabled={this.state.loading}
+                                            className={
+                                                styles[
+                                                    "custom-btn"
+                                                ]
+                                            }
+                                            disabled={
+                                                this.state.loading
+                                            }
                                         >
                                             {this.state.loading
                                                 ? "در حال بررسی..."
@@ -398,8 +479,13 @@ class Login extends React.Component {
 
                                     <button
                                         className="btn btn-link mt-2"
-                                        onClick={this.handleBackToPhone}
-                                        disabled={this.state.loading}
+                                        onClick={
+                                            this
+                                                .handleBackToPhone
+                                        }
+                                        disabled={
+                                            this.state.loading
+                                        }
                                     >
                                         بازگشت به ویرایش شماره
                                     </button>

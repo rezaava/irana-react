@@ -2,7 +2,7 @@ import React from "react";
 import { FaRegClock, FaChevronDown, FaFileAlt } from "react-icons/fa";
 import moment from "moment-jalaali";
 
-const API_URL = "https://iranaserviceapp.ir/test/api";
+const API_URL = "http://127.0.0.1:8000/api";
 
 const PERSIAN_MONTHS = [
   "فروردین",
@@ -83,12 +83,6 @@ class RequestsReportForm extends React.Component {
      * ==============================
      * تاریخ شروع
      * ==============================
-     *
-     * مثال:
-     * 1404/06/01
-     *
-     * تبدیل می‌شود به:
-     * 2025-08-23
      */
 
     const jalaliStart = `${year}/${paddedMonth}/01`;
@@ -96,7 +90,7 @@ class RequestsReportForm extends React.Component {
     const start = moment(
       jalaliStart,
       "jYYYY/jMM/jDD"
-    ).format("YYYY-MM-DD");
+    ).format("YYYY/MM/DD");
 
     /*
      * ==============================
@@ -125,11 +119,11 @@ class RequestsReportForm extends React.Component {
     const end = moment(
       jalaliEnd,
       "jYYYY/jMM/jDD"
-    ).format("YYYY-MM-DD");
+    ).format("YYYY/MM/DD");
 
     /*
      * ==============================
-     * لاگ برای تست
+     * لاگ
      * ==============================
      */
 
@@ -137,7 +131,7 @@ class RequestsReportForm extends React.Component {
     console.log("JALALI END:", jalaliEnd);
 
     console.log("MILADI START:", start);
-    console.log("MILADI END:", end);
+    console.log("MILADI END:", `${end} 23:59:59`);
 
     /*
      * ==============================
@@ -153,7 +147,7 @@ class RequestsReportForm extends React.Component {
 
     const url = `${API_URL}/excel?start=${encodeURIComponent(
       start
-    )}&end=${encodeURIComponent(end)}`;
+    )}&end=${encodeURIComponent(`${end} 23:59:59`)}`;
 
     console.log("EXCEL URL:", url);
 
