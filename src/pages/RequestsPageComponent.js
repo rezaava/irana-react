@@ -1008,6 +1008,7 @@ class RequestsPage extends React.Component {
                         paddingRight: "12px",
                         paddingTop: "12px",
                         paddingBottom: "8px",
+                        
                     }}
                 >
 
@@ -1018,6 +1019,8 @@ class RequestsPage extends React.Component {
                         style={{
                             animation:
                                 "fadeSlideDown .45s ease",
+                                marginLeft: "35px",
+
                         }}
                     >
                         <FaSearch
@@ -1039,6 +1042,7 @@ class RequestsPage extends React.Component {
                             }
                             placeholder="جستجو..."
                             className="form-control border rounded-pill shadow-none"
+
                             style={{
                                 height: "58px",
                                 paddingRight:

@@ -31,6 +31,7 @@ import NotificationAddPage from './pages/NotificationAddPageComponent';
 import ProfileChangeRequestsPage from './pages/ProfileChangeRequestsPage';
 import PersonalInfoPageComponenet from './pages/PersonalInfoPageComponenet';
 import ChatPage from './pages/ChatPageComponent';
+import HomeButtonComponent from './pages/HomeButtonComponent';
 
 function App() {
   return (
@@ -86,6 +87,7 @@ function App() {
 
         <Route path="/chat/:id" element={<ChatPage />} />
       </Routes>
+        <HomeButtonComponent />
       <Nav/>
 
     </BrowserRouter>

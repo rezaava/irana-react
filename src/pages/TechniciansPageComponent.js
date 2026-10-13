@@ -784,6 +784,7 @@ class TechniciansPage extends React.Component {
 
             <div
               className="d-flex align-items-center gap-2 border rounded-pill px-3 py-2 mb-3 bg-white"
+              style={{ marginLeft: "40px" }}
             >
               <input
                 type="text"

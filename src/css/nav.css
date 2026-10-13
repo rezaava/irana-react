@@ -1,7 +1,7 @@
 :root {
   --bar-dark: #2196f3;
   --bar-dark-2: #1976d2;
-  --muted: #bbdefb;
+  --muted: #e4f3ff;
   --page-bg-1: #ffffff;
   --page-bg-2: #e8f4ff;
   --accent-1: #64b5f6;
@@ -189,7 +189,7 @@ body {
   font-weight: 500;
   letter-spacing: 0.2px;
   transition: color 0.35s ease, font-weight 0.35s ease;
-  color: var(--muted);
+  color: #e4f3ff;
   line-height: 1;
 }
 

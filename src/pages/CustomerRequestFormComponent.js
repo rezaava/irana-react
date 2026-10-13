@@ -87,12 +87,15 @@ class CustomerRequestForm extends React.Component {
         ? relatedRequest.problem || ""
         : "",
 
-      visitTime: "",
+      visitTime: relatedRequest?.time
+        ? new Date(
+            relatedRequest.time.replace(/\//g, "-")
+          )
+        : "",
 
       visitTimeGregorian: relatedRequest
         ? relatedRequest.time || ""
         : "",
-
       description: relatedRequest
         ? relatedRequest.description || ""
         : "",

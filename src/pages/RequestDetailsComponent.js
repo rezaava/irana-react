@@ -185,6 +185,7 @@ class RequestDetailPage extends React.Component {
       showConfirmModal: false,
       confirmText: "",
       confirmLoading: false,
+      showReceiptImage: false,
     };
 
     this.handleBack = this.handleBack.bind(this);
@@ -448,6 +449,7 @@ class RequestDetailPage extends React.Component {
       showConfirmModal,
       confirmText,
       confirmLoading,
+      showReceiptImage,
     } = this.state;
 
     if (!authenticated) {
@@ -813,6 +815,11 @@ class RequestDetailPage extends React.Component {
                     src={receiptImage}
                     alt="فیش واریزی"
                     className="rounded-3 border"
+                    onClick={() =>
+                      this.setState({
+                        showReceiptImage: true,
+                      })
+                    }
                     style={{
                       width: 140,
                       height: 110,
@@ -885,6 +892,54 @@ class RequestDetailPage extends React.Component {
             افزودن درخواست مرتبط
           </Link>
         </div>
+
+        {showReceiptImage && receiptImage && (
+          <div
+            className="modal show d-block"
+            tabIndex="-1"
+            role="dialog"
+            onClick={() =>
+              this.setState({
+                showReceiptImage: false,
+              })
+            }
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.95)",
+              zIndex: 10000,
+            }}
+          >
+            <div className="modal-dialog modal-fullscreen m-0">
+              <div className="modal-content bg-dark border-0 rounded-0">
+                <div className="modal-header border-0 justify-content-end">
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    aria-label="بستن"
+                    onClick={() =>
+                      this.setState({
+                        showReceiptImage: false,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="modal-body d-flex align-items-center justify-content-center p-2">
+                  <img
+                    src={receiptImage}
+                    alt="فیش واریزی"
+                    className="img-fluid"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showConfirmModal && (
           <div
