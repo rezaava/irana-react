@@ -632,7 +632,7 @@ class RequestRecords extends React.Component {
 
         return (
             <div
-                className="row g-3"
+                className="row g-3 "
             >
                 {records.map(
                     (record, index) => (

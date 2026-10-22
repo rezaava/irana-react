@@ -8,7 +8,13 @@
   --accent-2: #42a5f5;
 }
 
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap");
+.app-container {
+  font-family: "Vazirmatn", sans-serif;
+}
+
 * {
+  font-family: "Vazirmatn", sans-serif;
   box-sizing: border-box;
   margin: 0;
   padding: 0;

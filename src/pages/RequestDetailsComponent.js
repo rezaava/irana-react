@@ -24,7 +24,6 @@ import {
   FaPlayCircle,
   FaTrashAlt,
 } from "react-icons/fa";
-
 import InfoField from "./InfoFieldComponenet";
 import withRouter from "./withRouter";
 import AuthCheck from "./AuthCheckComponent";
@@ -32,10 +31,7 @@ import Loader from "./LoaderComponent";
 import { Link } from "react-router-dom";
 
 const API_URL = "https://iranaserviceapp.ir/test/api";
-
-const CLEAR_IMAGE_URL =
-  "https://iranaserviceapp.ir/test/files/clear";
-
+const CLEAR_IMAGE_URL = "https://iranaserviceapp.ir/test/files/clear";
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
 function toPersianDigits(value) {
@@ -43,10 +39,7 @@ function toPersianDigits(value) {
     return "";
   }
 
-  return String(value).replace(
-    /\d/g,
-    (digit) => PERSIAN_DIGITS[Number(digit)]
-  );
+  return String(value).replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)]);
 }
 
 function formatDate(dateString) {
@@ -67,9 +60,7 @@ function formatDate(dateString) {
   if (year < 1700) {
     return `${toPersianDigits(year)}/${toPersianDigits(
       String(month).padStart(2, "0")
-    )}/${toPersianDigits(
-      String(day).padStart(2, "0")
-    )}`;
+    )}/${toPersianDigits(String(day).padStart(2, "0"))}`;
   }
 
   try {
@@ -182,6 +173,10 @@ class RequestDetailPage extends React.Component {
       loading: true,
       authenticated: false,
       error: "",
+      showDeleteModal: false,
+      deleteConfirmText: "",
+      deleteLoading: false,
+      deleteError: "",
       showConfirmModal: false,
       confirmText: "",
       confirmLoading: false,
@@ -207,6 +202,85 @@ class RequestDetailPage extends React.Component {
     );
   }
 
+  openDeleteModal = () => {
+    this.setState({
+      showDeleteModal: true,
+      deleteConfirmText: "",
+      deleteError: "",
+    });
+  };
+
+  closeDeleteModal = () => {
+    if (this.state.deleteLoading) {
+      return;
+    }
+
+    this.setState({
+      showDeleteModal: false,
+      deleteConfirmText: "",
+      deleteError: "",
+    });
+  };
+
+  handleDeleteRequest = async () => {
+    const { request, deleteConfirmText } = this.state;
+
+    if (!request?.id || deleteConfirmText.trim() !== "حذف") {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      this.setState({
+        deleteError: "لطفاً دوباره وارد حساب کاربری شوید.",
+      });
+      return;
+    }
+
+    this.setState({
+      deleteLoading: true,
+      deleteError: "",
+    });
+
+    try {
+      const response = await fetch(
+        `${API_URL}/delete-request?id=${encodeURIComponent(request.id)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || String(data.status) !== "1") {
+        throw new Error(data.message || "حذف درخواست ناموفق بود.");
+      }
+
+      this.setState((prevState) => ({
+        request: {
+          ...prevState.request,
+          status: -1,
+        },
+        showDeleteModal: false,
+        deleteConfirmText: "",
+        deleteLoading: false,
+        deleteError: "",
+      }));
+    } catch (error) {
+      console.error("DELETE REQUEST ERROR:", error);
+
+      this.setState({
+        deleteLoading: false,
+        deleteError: error.message || "خطا در حذف درخواست.",
+      });
+    }
+  };
+
   getRequestDetail = async () => {
     const { id } = this.props.params;
     const token = localStorage.getItem("token");
@@ -216,7 +290,6 @@ class RequestDetailPage extends React.Component {
         loading: false,
         error: "شناسه درخواست پیدا نشد.",
       });
-
       return;
     }
 
@@ -225,7 +298,6 @@ class RequestDetailPage extends React.Component {
         loading: false,
         error: "توکن ورود پیدا نشد.",
       });
-
       return;
     }
 
@@ -251,11 +323,8 @@ class RequestDetailPage extends React.Component {
           request: null,
           clear: null,
           loading: false,
-          error:
-            data.message ||
-            "اطلاعات درخواست پیدا نشد.",
+          error: data.message || "اطلاعات درخواست پیدا نشد.",
         });
-
         return;
       }
 
@@ -269,7 +338,6 @@ class RequestDetailPage extends React.Component {
           loading: false,
           error: "درخواست پیدا نشد.",
         });
-
         return;
       }
 
@@ -280,10 +348,7 @@ class RequestDetailPage extends React.Component {
         error: "",
       });
     } catch (error) {
-      console.error(
-        "GET REQUEST DETAIL ERROR:",
-        error
-      );
+      console.error("GET REQUEST DETAIL ERROR:", error);
 
       this.setState({
         request: null,
@@ -310,14 +375,9 @@ class RequestDetailPage extends React.Component {
     }
 
     try {
-      await navigator.clipboard.writeText(
-        String(request.code)
-      );
+      await navigator.clipboard.writeText(String(request.code));
     } catch (error) {
-      console.error(
-        "COPY REQUEST CODE ERROR:",
-        error
-      );
+      console.error("COPY REQUEST CODE ERROR:", error);
     }
   };
 
@@ -342,11 +402,7 @@ class RequestDetailPage extends React.Component {
   handleConfirm = async () => {
     const { request, confirmText } = this.state;
 
-    if (!request?.id) {
-      return;
-    }
-
-    if (!confirmText.trim()) {
+    if (!request?.id || !confirmText.trim()) {
       return;
     }
 
@@ -361,28 +417,23 @@ class RequestDetailPage extends React.Component {
     });
 
     try {
-      const response = await fetch(
-        `${API_URL}/clear-request`,
-        {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            id: request.id,
-            desc: confirmText.trim(),
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/clear-request`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: request.id,
+          desc: confirmText.trim(),
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok || String(data.status) !== "1") {
-        throw new Error(
-          data.message || "تأیید انجام نشد."
-        );
+        throw new Error(data.message || "تأیید انجام نشد.");
       }
 
       this.setState({
@@ -395,28 +446,17 @@ class RequestDetailPage extends React.Component {
         },
       });
     } catch (error) {
-      console.error(
-        "CONFIRM REQUEST ERROR:",
-        error
-      );
+      console.error("CONFIRM REQUEST ERROR:", error);
 
       this.setState({
         confirmLoading: false,
       });
 
-      alert(
-        error.message ||
-          "خطا در تأیید تسویه."
-      );
+      alert(error.message || "خطا در تأیید تسویه.");
     }
   };
 
-  renderActionButton(
-    content,
-    title,
-    onClick,
-    className = ""
-  ) {
+  renderActionButton(content, title, onClick, className = "") {
     return (
       <button
         type="button"
@@ -462,23 +502,15 @@ class RequestDetailPage extends React.Component {
 
     if (error) {
       return (
-        <div
-          dir="rtl"
-          className="container px-3 py-5"
-        >
-          <div className="text-center text-danger">
-            {error}
-          </div>
+        <div dir="rtl" className="container px-3 py-5">
+          <div className="text-center text-danger">{error}</div>
         </div>
       );
     }
 
     if (!request) {
       return (
-        <div
-          dir="rtl"
-          className="container px-3 py-5"
-        >
+        <div dir="rtl" className="container px-3 py-5">
           <div className="text-center text-muted">
             درخواست پیدا نشد.
           </div>
@@ -489,42 +521,24 @@ class RequestDetailPage extends React.Component {
     const technician = request.repairman_model;
 
     const technicianName = technician
-      ? `${technician.name || ""} ${
-          technician.family || ""
-        }`.trim()
+      ? `${technician.name || ""} ${technician.family || ""}`.trim()
       : "—";
 
-    const requestStatus = getRequestStatus(
-      request,
-      clear
-    );
-
-    const totalReceived = Number(
-      request.sum || 0
-    );
-
-    const suppliesCost = Number(
-      request.abzar || 0
-    );
-
-    const totalFee =
-      totalReceived - suppliesCost;
-
+    const requestStatus = getRequestStatus(request, clear);
+    const totalReceived = Number(request.sum || 0);
+    const suppliesCost = Number(request.abzar || 0);
+    const totalFee = totalReceived - suppliesCost;
     const commissionPercent = 50;
-
-    const commissionAmount =
-      Number(totalFee / 2 || 0);
+    const commissionAmount = Number(totalFee / 2 || 0);
 
     const receiptImage =
-      request.file1 &&
-      request.file1 !== ""
+      request.file1 && request.file1 !== ""
         ? `${CLEAR_IMAGE_URL}/${request.file1}`
         : null;
 
-    const relatedRequests =
-      Array.isArray(request.siblings)
-        ? request.siblings
-        : [];
+    const relatedRequests = Array.isArray(request.siblings)
+      ? request.siblings
+      : [];
 
     const canConfirm =
       Number(request.status) === 1 &&
@@ -535,7 +549,6 @@ class RequestDetailPage extends React.Component {
     return (
       <div dir="rtl">
         <div className="container px-3 pt-4 pb-5">
-
           <div className="d-flex align-items-center justify-content-between mb-4">
             <button
               type="button"
@@ -549,23 +562,41 @@ class RequestDetailPage extends React.Component {
               <FaChevronLeft size={14} />
             </button>
 
-            <button
-              type="button"
-              onClick={this.handleChat}
-              className="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center text-danger"
-              style={{
-                width: 36,
-                height: 36,
-              }}
-            >
-              <FaCommentDots size={16} />
-            </button>
+            <div className="d-flex align-items-center gap-2">
+              {Number(request.status) !== -1 &&
+                Number(request.deleted) !== 1 && (
+                  <button
+                    type="button"
+                    onClick={this.openDeleteModal}
+                    title="حذف درخواست"
+                    className="btn btn-light border border-danger rounded-3 p-3 d-flex align-items-center justify-content-center text-danger"
+                    style={{
+                      width: 44,
+                      height: 44,
+                    }}
+                  >
+                    <FaTrashAlt size={16} />
+                  </button>
+                )}
+
+              <Link
+                to="/form"
+                state={{
+                  editRequest: request,
+                }}
+                title="ویرایش درخواست"
+                className="btn btn-primary border-0 ms-5 rounded-3 p-3 d-flex align-items-center justify-content-center text-white text-decoration-none"
+                style={{
+                  width: 44,
+                  height: 44,
+                }}
+              >
+                <FaUserEdit size={16} />
+              </Link>
+            </div>
           </div>
 
-          <div
-            className="position-relative"
-            style={{ direction: "rtl" }}
-          >
+          <div className="position-relative" style={{ direction: "rtl" }}>
             <InfoField
               icon={<FaClone size={18} />}
               label="شماره درخواست"
@@ -581,10 +612,7 @@ class RequestDetailPage extends React.Component {
               )}
           </div>
 
-          <div
-            className="position-relative"
-            style={{ direction: "rtl" }}
-          >
+          <div className="position-relative" style={{ direction: "rtl" }}>
             <InfoField
               icon={<FaUserCog size={18} />}
               label="نام تعمیرکار"
@@ -615,7 +643,6 @@ class RequestDetailPage extends React.Component {
                   }}
                 >
                   <FaUserCog size={14} />
-
                   <FaSearch
                     size={7}
                     className="position-absolute bg-white rounded-circle"
@@ -635,10 +662,7 @@ class RequestDetailPage extends React.Component {
             value={request.name || "—"}
           />
 
-          <div
-            className="position-relative"
-            style={{ direction: "rtl" }}
-          >
+          <div className="position-relative" style={{ direction: "rtl" }}>
             <InfoField
               icon={<FaPhoneAlt size={18} />}
               label="شماره تماس"
@@ -675,9 +699,7 @@ class RequestDetailPage extends React.Component {
           <InfoField
             icon={<FaMapMarkerAlt size={18} />}
             label="استان"
-            value={
-              request.state_model?.name || "—"
-            }
+            value={request.state_model?.name || "—"}
           />
 
           <InfoField
@@ -689,25 +711,19 @@ class RequestDetailPage extends React.Component {
           <InfoField
             icon={<FaMicrochip size={18} />}
             label="نوع دستگاه"
-            value={
-              request.device_type || "—"
-            }
+            value={request.device_type || "—"}
           />
 
           <InfoField
             icon={<FaTag size={18} />}
             label="برند دستگاه"
-            value={
-              request.device_brand || "—"
-            }
+            value={request.device_brand || "—"}
           />
 
           <InfoField
             icon={<FaQuestionCircle size={18} />}
             label="ایراد دستگاه"
-            value={
-              request.problem || "—"
-            }
+            value={request.problem || "—"}
           />
 
           <InfoField
@@ -719,29 +735,18 @@ class RequestDetailPage extends React.Component {
           <InfoField
             icon={<FaSyncAlt size={18} />}
             label="توضیحات"
-            value={
-              request.description || "—"
-            }
+            value={request.description || "—"}
           />
 
-          <InfoField
-            icon={requestStatus.icon}
-            label="وضعیت"
-          >
-            <span
-              className={
-                requestStatus.className
-              }
-            >
+          <InfoField icon={requestStatus.icon} label="وضعیت">
+            <span className={requestStatus.className}>
               {requestStatus.text}
             </span>
           </InfoField>
 
           {request.end_description && (
             <InfoField
-              icon={
-                <FaExclamationCircle size={18} />
-              }
+              icon={<FaExclamationCircle size={18} />}
               label="توضیحات وضعیت"
               value={request.end_description}
             />
@@ -754,10 +759,7 @@ class RequestDetailPage extends React.Component {
                 label="کل دریافتی"
               >
                 <span className="fw-semibold">
-                  {totalReceived.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  تومان
+                  {totalReceived.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
@@ -766,19 +768,14 @@ class RequestDetailPage extends React.Component {
                 label="هزینه لوازم مصرفی"
               >
                 <span className="fw-semibold">
-                  {suppliesCost.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  تومان
+                  {suppliesCost.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
               <InfoField
                 icon={<FaBoxOpen size={18} />}
                 label="لوازم مصرفی"
-                value={
-                  request.abzar_details || "—"
-                }
+                value={request.abzar_details || "—"}
               />
 
               <InfoField
@@ -786,10 +783,7 @@ class RequestDetailPage extends React.Component {
                 label="کل اجرت"
               >
                 <span className="fw-semibold">
-                  {totalFee.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  تومان
+                  {totalFee.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
@@ -798,18 +792,13 @@ class RequestDetailPage extends React.Component {
                 label={`پورسانت (%${commissionPercent})`}
               >
                 <span className="fw-semibold">
-                  {commissionAmount.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  تومان
+                  {commissionAmount.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
               {receiptImage && (
                 <div className="d-flex align-items-center justify-content-between gap-3 border rounded-4 px-3 py-3 mb-3 bg-white">
-                  <span className="text-muted">
-                    فیش واریزی:
-                  </span>
+                  <span className="text-muted">فیش واریزی:</span>
 
                   <img
                     src={receiptImage}
@@ -831,15 +820,9 @@ class RequestDetailPage extends React.Component {
               )}
 
               <InfoField
-                icon={
-                  <FaExclamationCircle size={18} />
-                }
+                icon={<FaExclamationCircle size={18} />}
                 label="توضیحات تایید تسویه"
-                value={
-                  clear.description ||
-                  clear.desc ||
-                  "—"
-                }
+                value={clear.description || clear.desc || "—"}
               />
 
               {canConfirm && (
@@ -865,20 +848,17 @@ class RequestDetailPage extends React.Component {
             </div>
           ) : (
             <div>
-              {relatedRequests.map(
-                (related) => (
-                  <Link
-                    key={related.id}
-                    to={`/request-details/${related.id}`}
-                    className="text-decoration-none text-dark"
-                  >
-                    <div className="border rounded-3 p-3 mb-2 text-end">
-                      {related.code ||
-                        related.id}
-                    </div>
-                  </Link>
-                )
-              )}
+              {relatedRequests.map((related) => (
+                <Link
+                  key={related.id}
+                  to={`/request-details/${related.id}`}
+                  className="text-decoration-none text-dark"
+                >
+                  <div className="border rounded-3 p-3 mb-2 text-end">
+                    {related.code || related.id}
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
 
@@ -964,8 +944,7 @@ class RequestDetailPage extends React.Component {
                 borderRadius: "22px 22px 0 0",
                 padding: "18px",
                 boxSizing: "border-box",
-                boxShadow:
-                  "0 -5px 30px rgba(0,0,0,0.15)",
+                boxShadow: "0 -5px 30px rgba(0,0,0,0.15)",
               }}
             >
               <div
@@ -999,21 +978,132 @@ class RequestDetailPage extends React.Component {
               <button
                 type="button"
                 onClick={this.handleConfirm}
-                disabled={
-                  confirmLoading ||
-                  !confirmText.trim()
-                }
+                disabled={confirmLoading || !confirmText.trim()}
                 className="btn btn-success w-100 rounded-3 py-3 mt-3"
               >
-                {confirmLoading
-                  ? "در حال ثبت..."
-                  : "ثبت"}
+                {confirmLoading ? "در حال ثبت..." : "ثبت"}
               </button>
 
               <button
                 type="button"
                 onClick={this.closeConfirmModal}
                 disabled={confirmLoading}
+                className="btn btn-light border w-100 rounded-3 py-3 mt-2"
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        )}
+
+        {this.state.showDeleteModal && (
+          <div
+            onClick={this.closeDeleteModal}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10001,
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(5px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              dir="rtl"
+              style={{
+                width: "100%",
+                maxWidth: 390,
+                background: "#fff",
+                borderRadius: 24,
+                padding: 24,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                textAlign: "center",
+                animation: "deleteModalEnter 0.2s ease-out",
+              }}
+            >
+              <div
+                style={{
+                  width: 68,
+                  height: 68,
+                  borderRadius: 22,
+                  background: "#fff1f2",
+                  color: "#dc3545",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 18px",
+                }}
+              >
+                <FaTrashAlt size={27} />
+              </div>
+
+              <h5 className="fw-bold mb-3 text-danger">
+                حذف درخواست
+              </h5>
+
+              <p
+                className="text-muted mb-3"
+                style={{
+                  fontSize: 14,
+                  lineHeight: 2,
+                }}
+              >
+                برای تأیید حذف درخواست شماره{" "}
+                <strong className="text-dark">
+                  {request.code || request.id}
+                </strong>
+                ، کلمه «حذف» را وارد کنید.
+              </p>
+
+              <input
+                type="text"
+                value={this.state.deleteConfirmText}
+                onChange={(e) =>
+                  this.setState({
+                    deleteConfirmText: e.target.value,
+                    deleteError: "",
+                  })
+                }
+                placeholder="برای تأیید، بنویسید حذف"
+                className="form-control rounded-3 py-3 mb-3 text-center"
+                disabled={this.state.deleteLoading}
+                autoComplete="off"
+                autoFocus
+              />
+
+              {this.state.deleteError && (
+                <div className="alert alert-danger rounded-3 text-end py-2">
+                  {this.state.deleteError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={this.handleDeleteRequest}
+                disabled={
+                  this.state.deleteLoading ||
+                  this.state.deleteConfirmText.trim() !== "حذف"
+                }
+                className="btn btn-danger w-100 rounded-3 py-3 fw-semibold"
+              >
+                {this.state.deleteLoading ? (
+                  "در حال حذف..."
+                ) : (
+                  <>
+                    <FaTrashAlt className="ms-2" />
+                    حذف نهایی درخواست
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={this.closeDeleteModal}
+                disabled={this.state.deleteLoading}
                 className="btn btn-light border w-100 rounded-3 py-3 mt-2"
               >
                 انصراف
