@@ -177,6 +177,7 @@ class RequestDetailPage extends React.Component {
       deleteConfirmText: "",
       deleteLoading: false,
       deleteError: "",
+      reactivateLoading: false,
       showConfirmModal: false,
       confirmText: "",
       confirmLoading: false,
@@ -278,6 +279,55 @@ class RequestDetailPage extends React.Component {
         deleteLoading: false,
         deleteError: error.message || "خطا در حذف درخواست.",
       });
+    }
+  };
+  handleReactivateRequest = async () => {
+    const { request, reactivateLoading } = this.state;
+
+    if (!request?.id || reactivateLoading) {
+      return;
+    }
+
+    if (!window.confirm("آیا از فعال‌سازی مجدد درخواست اطمینان دارید؟")) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("لطفاً دوباره وارد حساب کاربری شوید.");
+      return;
+    }
+
+    this.setState({ reactivateLoading: true });
+
+    try {
+      const response = await fetch(
+        `${API_URL}/refresh-request?id=${encodeURIComponent(request.id)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || String(data.status) !== "1") {
+        throw new Error(data.message || "فعال‌سازی مجدد درخواست ناموفق بود.");
+      }
+
+      await this.getRequestDetail();
+
+      this.setState({ reactivateLoading: false });
+
+      alert(data.message || "درخواست با موفقیت مجدداً فعال شد.");
+    } catch (error) {
+      console.error("REACTIVATE REQUEST ERROR:", error);
+      this.setState({ reactivateLoading: false });
+      alert(error.message || "خطا در فعال‌سازی مجدد درخواست.");
     }
   };
 
@@ -563,6 +613,26 @@ class RequestDetailPage extends React.Component {
             </button>
 
             <div className="d-flex align-items-center gap-2">
+              {(Number(request.status) === -1 ||
+                (Number(request.status) === 4 && Number(request.end) !== 2) ||
+                (Number(request.status) === 1 && Number(request.end) === 2)) &&
+                Number(request.deleted) !== 1 && (
+                  <button
+                    type="button"
+                    onClick={this.handleReactivateRequest}
+                    disabled={this.state.reactivateLoading}
+                    title="فعال‌سازی مجدد درخواست"
+                    aria-label="فعال‌سازی مجدد درخواست"
+                    className="btn btn-light border border-success rounded-3 p-3 d-flex align-items-center justify-content-center text-success"
+                    style={{
+                      width: 44,
+                      height: 44,
+                    }}
+                  >
+                    <FaRedo size={16} />
+                  </button>
+                )}
+
               {Number(request.status) !== -1 &&
                 Number(request.deleted) !== 1 && (
                   <button
