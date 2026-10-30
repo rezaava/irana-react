@@ -17,12 +17,15 @@ import {
   FaFileInvoice,
   FaExclamationCircle,
   FaChevronLeft,
-  FaCommentDots,
   FaCheckCircle,
   FaTimesCircle,
   FaRedo,
   FaPlayCircle,
   FaTrashAlt,
+  FaEdit,
+  FaSave,
+  FaTimes,
+  FaImage,
 } from "react-icons/fa";
 import InfoField from "./InfoFieldComponenet";
 import withRouter from "./withRouter";
@@ -35,23 +38,16 @@ const CLEAR_IMAGE_URL = "https://iranaserviceapp.ir/test/files/clear";
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
 function toPersianDigits(value) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
+  if (value === null || value === undefined) return "";
   return String(value).replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)]);
 }
 
 function formatDate(dateString) {
-  if (!dateString) {
-    return "—";
-  }
+  if (!dateString) return "—";
 
   const parts = String(dateString).split("/");
 
-  if (parts.length !== 3) {
-    return dateString;
-  }
+  if (parts.length !== 3) return dateString;
 
   const year = Number(parts[0]);
   const month = Number(parts[1]);
@@ -64,13 +60,11 @@ function formatDate(dateString) {
   }
 
   try {
-    const date = new Date(year, month - 1, day);
-
     return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).format(date);
+    }).format(new Date(year, month - 1, day));
   } catch (error) {
     console.error("DATE FORMAT ERROR:", error);
     return dateString;
@@ -92,16 +86,7 @@ function getRequestStatus(request, clear) {
     };
   }
 
-  if (status === 4) {
-    return {
-      type: "canceled",
-      text: "کنسل توسط تعمیرکار",
-      className: "text-danger fw-semibold",
-      icon: <FaTimesCircle />,
-    };
-  }
-
-  if (status === -1) {
+  if (status === 4 || status === -1) {
     return {
       type: "canceled",
       text: "کنسل توسط تعمیرکار",
@@ -173,15 +158,30 @@ class RequestDetailPage extends React.Component {
       loading: true,
       authenticated: false,
       error: "",
+
       showDeleteModal: false,
       deleteConfirmText: "",
       deleteLoading: false,
       deleteError: "",
+
       reactivateLoading: false,
+
       showConfirmModal: false,
       confirmText: "",
       confirmLoading: false,
+
       showReceiptImage: false,
+      showEditReceiptModal: false,
+      receiptFile: null,
+      receiptPreview: "",
+      receiptLoading: false,
+      receiptError: "",
+
+      // ویرایش هزینه لوازم مصرفی
+      showEditSuppliesModal: false,
+      suppliesInput: "",
+      suppliesLoading: false,
+      suppliesError: "",
     };
 
     this.handleBack = this.handleBack.bind(this);
@@ -189,19 +189,238 @@ class RequestDetailPage extends React.Component {
   }
 
   componentDidMount() {
-    if (!AuthCheck()) {
+    if (!AuthCheck()) return;
+
+    this.setState({ authenticated: true }, () => {
+      this.getRequestDetail();
+    });
+  }
+
+  getRequestDetail = async () => {
+    const { id } = this.props.params;
+    const token = localStorage.getItem("token");
+
+    if (!id) {
+      this.setState({
+        loading: false,
+        error: "شناسه درخواست پیدا نشد.",
+      });
       return;
     }
 
-    this.setState(
-      {
-        authenticated: true,
-      },
-      () => {
-        this.getRequestDetail();
+    if (!token) {
+      this.setState({
+        loading: false,
+        error: "توکن ورود پیدا نشد.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/detail?id=${encodeURIComponent(id)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+
+      if (String(data.status) !== "1") {
+        this.setState({
+          request: null,
+          clear: null,
+          loading: false,
+          error: data.message || "اطلاعات درخواست پیدا نشد.",
+        });
+        return;
       }
-    );
+
+      if (!data.request) {
+        this.setState({
+          request: null,
+          clear: null,
+          loading: false,
+          error: "درخواست پیدا نشد.",
+        });
+        return;
+      }
+
+      this.setState({
+        request: data.request,
+        clear: data.clear || null,
+        loading: false,
+        error: "",
+      });
+    } catch (error) {
+      console.error("GET REQUEST DETAIL ERROR:", error);
+
+      this.setState({
+        request: null,
+        clear: null,
+        loading: false,
+        error: "خطا در دریافت اطلاعات درخواست.",
+      });
+    }
+  };
+
+  handleBack() {
+    this.props.navigate(-1);
   }
+
+  handleChat() {
+    console.log("رفتن به گفتگو");
+  }
+
+  handleCopyRequestCode = async () => {
+    const { request } = this.state;
+
+    if (!request?.code) return;
+
+    try {
+      await navigator.clipboard.writeText(String(request.code));
+    } catch (error) {
+      console.error("COPY REQUEST CODE ERROR:", error);
+    }
+  };
+
+  // =========================
+  // ویرایش هزینه لوازم مصرفی
+  // =========================
+
+  openEditSuppliesModal = () => {
+    const { request } = this.state;
+
+    this.setState({
+      showEditSuppliesModal: true,
+      suppliesInput: String(request?.abzar ?? 0),
+      suppliesError: "",
+    });
+  };
+
+  closeEditSuppliesModal = () => {
+    if (this.state.suppliesLoading) return;
+
+    this.setState({
+      showEditSuppliesModal: false,
+      suppliesInput: "",
+      suppliesError: "",
+    });
+  };
+
+  handleSuppliesInputChange = (event) => {
+    const value = event.target.value;
+
+    if (value !== "" && !/^\d+(\.\d*)?$/.test(value)) {
+      return;
+    }
+
+    this.setState({
+      suppliesInput: value,
+      suppliesError: "",
+    });
+  };
+
+  handleUpdateSupplies = async () => {
+    const { request, suppliesInput } = this.state;
+
+    if (!request?.id) return;
+
+    if (suppliesInput.trim() === "") {
+      this.setState({
+        suppliesError: "هزینه لوازم مصرفی را وارد کنید.",
+      });
+      return;
+    }
+
+    const suppliesCost = Number(suppliesInput);
+    const totalReceived = Number(request.sum || 0);
+
+    if (!Number.isFinite(suppliesCost) || suppliesCost < 0) {
+      this.setState({
+        suppliesError: "مبلغ واردشده معتبر نیست.",
+      });
+      return;
+    }
+
+    if (suppliesCost > totalReceived) {
+      this.setState({
+        suppliesError: "هزینه لوازم مصرفی نمی‌تواند از کل دریافتی بیشتر باشد.",
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      this.setState({
+        suppliesError: "لطفاً دوباره وارد حساب کاربری شوید.",
+      });
+      return;
+    }
+
+    this.setState({
+      suppliesLoading: true,
+      suppliesError: "",
+    });
+
+    try {
+      const response = await fetch(
+        `${API_URL}/edit/${encodeURIComponent(request.id)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            abzar: suppliesCost,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || String(data.status) !== "1") {
+        const validationMessage = data.errors?.abzar?.[0];
+
+        throw new Error(
+          validationMessage ||
+            data.message ||
+            "ویرایش هزینه لوازم مصرفی ناموفق بود."
+        );
+      }
+
+      this.setState({
+        showEditSuppliesModal: false,
+        suppliesLoading: false,
+        suppliesInput: "",
+        suppliesError: "",
+      });
+
+      await this.getRequestDetail();
+
+      alert(data.message || "هزینه لوازم مصرفی با موفقیت ویرایش شد.");
+    } catch (error) {
+      console.error("UPDATE SUPPLIES ERROR:", error);
+
+      this.setState({
+        suppliesLoading: false,
+        suppliesError: error.message || "خطا در ویرایش هزینه لوازم مصرفی.",
+      });
+    }
+  };
+
+  // =========================
+  // حذف درخواست
+  // =========================
 
   openDeleteModal = () => {
     this.setState({
@@ -212,9 +431,7 @@ class RequestDetailPage extends React.Component {
   };
 
   closeDeleteModal = () => {
-    if (this.state.deleteLoading) {
-      return;
-    }
+    if (this.state.deleteLoading) return;
 
     this.setState({
       showDeleteModal: false,
@@ -226,9 +443,7 @@ class RequestDetailPage extends React.Component {
   handleDeleteRequest = async () => {
     const { request, deleteConfirmText } = this.state;
 
-    if (!request?.id || deleteConfirmText.trim() !== "حذف") {
-      return;
-    }
+    if (!request?.id || deleteConfirmText.trim() !== "حذف") return;
 
     const token = localStorage.getItem("token");
 
@@ -281,12 +496,15 @@ class RequestDetailPage extends React.Component {
       });
     }
   };
+
+  // =========================
+  // فعال‌سازی مجدد درخواست
+  // =========================
+
   handleReactivateRequest = async () => {
     const { request, reactivateLoading } = this.state;
 
-    if (!request?.id || reactivateLoading) {
-      return;
-    }
+    if (!request?.id || reactivateLoading) return;
 
     if (!window.confirm("آیا از فعال‌سازی مجدد درخواست اطمینان دارید؟")) {
       return;
@@ -322,7 +540,6 @@ class RequestDetailPage extends React.Component {
       await this.getRequestDetail();
 
       this.setState({ reactivateLoading: false });
-
       alert(data.message || "درخواست با موفقیت مجدداً فعال شد.");
     } catch (error) {
       console.error("REACTIVATE REQUEST ERROR:", error);
@@ -331,105 +548,9 @@ class RequestDetailPage extends React.Component {
     }
   };
 
-  getRequestDetail = async () => {
-    const { id } = this.props.params;
-    const token = localStorage.getItem("token");
-
-    if (!id) {
-      this.setState({
-        loading: false,
-        error: "شناسه درخواست پیدا نشد.",
-      });
-      return;
-    }
-
-    if (!token) {
-      this.setState({
-        loading: false,
-        error: "توکن ورود پیدا نشد.",
-      });
-      return;
-    }
-
-    const url = `${API_URL}/detail?id=${encodeURIComponent(id)}`;
-
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (String(data.status) !== "1") {
-        this.setState({
-          request: null,
-          clear: null,
-          loading: false,
-          error: data.message || "اطلاعات درخواست پیدا نشد.",
-        });
-        return;
-      }
-
-      const request = data.request || null;
-      const clear = data.clear || null;
-
-      if (!request) {
-        this.setState({
-          request: null,
-          clear: null,
-          loading: false,
-          error: "درخواست پیدا نشد.",
-        });
-        return;
-      }
-
-      this.setState({
-        request,
-        clear,
-        loading: false,
-        error: "",
-      });
-    } catch (error) {
-      console.error("GET REQUEST DETAIL ERROR:", error);
-
-      this.setState({
-        request: null,
-        clear: null,
-        loading: false,
-        error: "خطا در دریافت اطلاعات درخواست.",
-      });
-    }
-  };
-
-  handleBack() {
-    this.props.navigate(-1);
-  }
-
-  handleChat() {
-    console.log("رفتن به گفتگو");
-  }
-
-  handleCopyRequestCode = async () => {
-    const { request } = this.state;
-
-    if (!request?.code) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(String(request.code));
-    } catch (error) {
-      console.error("COPY REQUEST CODE ERROR:", error);
-    }
-  };
+  // =========================
+  // تأیید تسویه
+  // =========================
 
   openConfirmModal = () => {
     this.setState({
@@ -439,9 +560,7 @@ class RequestDetailPage extends React.Component {
   };
 
   closeConfirmModal = () => {
-    if (this.state.confirmLoading) {
-      return;
-    }
+    if (this.state.confirmLoading) return;
 
     this.setState({
       showConfirmModal: false,
@@ -452,19 +571,16 @@ class RequestDetailPage extends React.Component {
   handleConfirm = async () => {
     const { request, confirmText } = this.state;
 
-    if (!request?.id || !confirmText.trim()) {
-      return;
-    }
+    if (!request?.id || !confirmText.trim()) return;
 
     const token = localStorage.getItem("token");
 
     if (!token) {
+      alert("لطفاً دوباره وارد حساب کاربری شوید.");
       return;
     }
 
-    this.setState({
-      confirmLoading: true,
-    });
+    this.setState({ confirmLoading: true });
 
     try {
       const response = await fetch(`${API_URL}/clear-request`, {
@@ -486,24 +602,175 @@ class RequestDetailPage extends React.Component {
         throw new Error(data.message || "تأیید انجام نشد.");
       }
 
-      this.setState({
+      this.setState((prevState) => ({
         showConfirmModal: false,
         confirmText: "",
         confirmLoading: false,
         request: {
-          ...this.state.request,
+          ...prevState.request,
           cleared: 1,
         },
-      });
+      }));
     } catch (error) {
       console.error("CONFIRM REQUEST ERROR:", error);
 
-      this.setState({
-        confirmLoading: false,
-      });
-
+      this.setState({ confirmLoading: false });
       alert(error.message || "خطا در تأیید تسویه.");
     }
+  };
+
+  // =========================
+  // ویرایش عکس فیش تسویه
+  // =========================
+
+  openEditReceiptModal = () => {
+    const { receiptImage } = this.getReceiptData();
+
+    this.setState({
+      showEditReceiptModal: true,
+      receiptFile: null,
+      receiptPreview: receiptImage || "",
+      receiptError: "",
+    });
+  };
+
+  closeEditReceiptModal = () => {
+    if (this.state.receiptLoading) return;
+
+    this.setState({
+      showEditReceiptModal: false,
+      receiptFile: null,
+      receiptPreview: "",
+      receiptError: "",
+    });
+  };
+
+  handleReceiptFileChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      this.setState({
+        receiptError: "لطفاً یک فایل تصویری انتخاب کنید.",
+        receiptFile: null,
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.setState({
+        receiptError: "حجم عکس نباید بیشتر از ۵ مگابایت باشد.",
+        receiptFile: null,
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      this.setState({
+        receiptFile: file,
+        receiptPreview: reader.result,
+        receiptError: "",
+      });
+    };
+
+    reader.onerror = () => {
+      this.setState({
+        receiptError: "خواندن تصویر ناموفق بود.",
+      });
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  handleUpdateReceiptImage = async () => {
+    const { request, receiptFile } = this.state;
+
+    if (!request?.id || !receiptFile) {
+      this.setState({
+        receiptError: "لطفاً عکس جدید را انتخاب کنید.",
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      this.setState({
+        receiptError: "لطفاً دوباره وارد حساب کاربری شوید.",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("id", request.id);
+    formData.append("file1", receiptFile);
+
+    this.setState({
+      receiptLoading: true,
+      receiptError: "",
+    });
+
+    try {
+      const response = await fetch(`${API_URL}/update-clear-image`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || String(data.status) !== "1") {
+        const validationMessage = data.errors?.file1?.[0];
+
+        throw new Error(
+          validationMessage ||
+            data.message ||
+            "ویرایش عکس فیش ناموفق بود."
+        );
+      }
+
+      this.setState((prevState) => ({
+        clear: {
+          ...prevState.clear,
+          file1: data.file1,
+        },
+        request: {
+          ...prevState.request,
+          file1: data.file1,
+        },
+        showEditReceiptModal: false,
+        receiptFile: null,
+        receiptPreview: "",
+        receiptLoading: false,
+        receiptError: "",
+      }));
+
+      alert(data.message || "عکس فیش با موفقیت ویرایش شد.");
+    } catch (error) {
+      console.error("UPDATE RECEIPT IMAGE ERROR:", error);
+
+      this.setState({
+        receiptLoading: false,
+        receiptError: error.message || "خطا در ویرایش عکس فیش.",
+      });
+    }
+  };
+
+  getReceiptData = () => {
+    const { request, clear } = this.state;
+    const file = clear?.file1 || request?.file1 || "";
+
+    const receiptImage = file
+      ? `${CLEAR_IMAGE_URL}/${String(file).replace(/^\/+/, "")}`
+      : null;
+
+    return { receiptImage };
   };
 
   renderActionButton(content, title, onClick, className = "") {
@@ -512,6 +779,7 @@ class RequestDetailPage extends React.Component {
         type="button"
         onClick={onClick}
         title={title}
+        aria-label={title}
         className={`btn btn-light border rounded-3 d-flex align-items-center justify-content-center ${className}`}
         style={{
           width: 34,
@@ -540,15 +808,20 @@ class RequestDetailPage extends React.Component {
       confirmText,
       confirmLoading,
       showReceiptImage,
+      showEditReceiptModal,
+      receiptPreview,
+      receiptLoading,
+      receiptError,
+      receiptFile,
+      showEditSuppliesModal,
+      suppliesInput,
+      suppliesLoading,
+      suppliesError,
     } = this.state;
 
-    if (!authenticated) {
-      return null;
-    }
+    if (!authenticated) return null;
 
-    if (loading) {
-      return <Loader />;
-    }
+    if (loading) return <Loader />;
 
     if (error) {
       return (
@@ -561,9 +834,7 @@ class RequestDetailPage extends React.Component {
     if (!request) {
       return (
         <div dir="rtl" className="container px-3 py-5">
-          <div className="text-center text-muted">
-            درخواست پیدا نشد.
-          </div>
+          <div className="text-center text-muted">درخواست پیدا نشد.</div>
         </div>
       );
     }
@@ -575,16 +846,20 @@ class RequestDetailPage extends React.Component {
       : "—";
 
     const requestStatus = getRequestStatus(request, clear);
+
     const totalReceived = Number(request.sum || 0);
     const suppliesCost = Number(request.abzar || 0);
     const totalFee = totalReceived - suppliesCost;
     const commissionPercent = 50;
-    const commissionAmount = Number(totalFee / 2 || 0);
+    const commissionAmount = totalFee / 2;
 
-    const receiptImage =
-      request.file1 && request.file1 !== ""
-        ? `${CLEAR_IMAGE_URL}/${request.file1}`
-        : null;
+    const previewSuppliesCost =
+      suppliesInput.trim() === "" ? 0 : Number(suppliesInput);
+
+    const previewTotalFee = totalReceived - previewSuppliesCost;
+    const previewCommission = previewTotalFee / 2;
+
+    const { receiptImage } = this.getReceiptData();
 
     const relatedRequests = Array.isArray(request.siblings)
       ? request.siblings
@@ -604,30 +879,25 @@ class RequestDetailPage extends React.Component {
               type="button"
               onClick={this.handleBack}
               className="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center"
-              style={{
-                width: 36,
-                height: 36,
-              }}
+              style={{ width: 36, height: 36 }}
             >
               <FaChevronLeft size={14} />
             </button>
 
             <div className="d-flex align-items-center gap-2">
               {(Number(request.status) === -1 ||
-                (Number(request.status) === 4 && Number(request.end) !== 2) ||
-                (Number(request.status) === 1 && Number(request.end) === 2)) &&
+                (Number(request.status) === 4 &&
+                  Number(request.end) !== 2) ||
+                (Number(request.status) === 1 &&
+                  Number(request.end) === 2)) &&
                 Number(request.deleted) !== 1 && (
                   <button
                     type="button"
                     onClick={this.handleReactivateRequest}
                     disabled={this.state.reactivateLoading}
                     title="فعال‌سازی مجدد درخواست"
-                    aria-label="فعال‌سازی مجدد درخواست"
                     className="btn btn-light border border-success rounded-3 p-3 d-flex align-items-center justify-content-center text-success"
-                    style={{
-                      width: 44,
-                      height: 44,
-                    }}
+                    style={{ width: 44, height: 44 }}
                   >
                     <FaRedo size={16} />
                   </button>
@@ -640,10 +910,7 @@ class RequestDetailPage extends React.Component {
                     onClick={this.openDeleteModal}
                     title="حذف درخواست"
                     className="btn btn-light border border-danger rounded-3 p-3 d-flex align-items-center justify-content-center text-danger"
-                    style={{
-                      width: 44,
-                      height: 44,
-                    }}
+                    style={{ width: 44, height: 44 }}
                   >
                     <FaTrashAlt size={16} />
                   </button>
@@ -651,15 +918,10 @@ class RequestDetailPage extends React.Component {
 
               <Link
                 to="/form"
-                state={{
-                  editRequest: request,
-                }}
+                state={{ editRequest: request }}
                 title="ویرایش درخواست"
                 className="btn btn-primary border-0 ms-5 rounded-3 p-3 d-flex align-items-center justify-content-center text-white text-decoration-none"
-                style={{
-                  width: 44,
-                  height: 44,
-                }}
+                style={{ width: 44, height: 44 }}
               >
                 <FaUserEdit size={16} />
               </Link>
@@ -707,19 +969,13 @@ class RequestDetailPage extends React.Component {
               >
                 <span
                   className="position-relative d-flex align-items-center justify-content-center"
-                  style={{
-                    width: 20,
-                    height: 20,
-                  }}
+                  style={{ width: 20, height: 20 }}
                 >
                   <FaUserCog size={14} />
                   <FaSearch
                     size={7}
                     className="position-absolute bg-white rounded-circle"
-                    style={{
-                      right: -2,
-                      bottom: -1,
-                    }}
+                    style={{ right: -2, bottom: -1 }}
                   />
                 </span>
               </Link>
@@ -739,25 +995,15 @@ class RequestDetailPage extends React.Component {
               value={request.mobile || "—"}
             />
 
-            {request.mobile && (
-              <a
-                href={`tel:${request.mobile}`}
-                title="تماس با مشتری"
-                className="btn btn-light border rounded-3 d-flex align-items-center justify-content-center text-success text-decoration-none"
-                style={{
-                  width: 34,
-                  height: 34,
-                  padding: 0,
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  zIndex: 2,
-                }}
-              >
-                <FaPhone size={14} />
-              </a>
-            )}
+            {request.mobile &&
+              this.renderActionButton(
+                <FaPhone size={14} />,
+                "تماس با مشتری",
+                () => {
+                  window.location.href = `tel:${request.mobile}`;
+                },
+                "text-success"
+              )}
           </div>
 
           <InfoField
@@ -824,23 +1070,34 @@ class RequestDetailPage extends React.Component {
 
           {clear && (
             <>
-              <InfoField
-                icon={<FaCoins size={18} />}
-                label="کل دریافتی"
-              >
+              <InfoField icon={<FaCoins size={18} />} label="کل دریافتی">
                 <span className="fw-semibold">
                   {totalReceived.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
-              <InfoField
-                icon={<FaCoins size={18} />}
-                label="هزینه لوازم مصرفی"
-              >
-                <span className="fw-semibold">
+              {/* هزینه لوازم مصرفی با امکان ویرایش */}
+              <div className="border rounded-4 px-3 py-3 mb-3 bg-white">
+                <div className="d-flex align-items-center justify-content-between gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <FaCoins size={18} className="text-muted" />
+                    <span className="text-muted">هزینه لوازم مصرفی</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={this.openEditSuppliesModal}
+                    className="btn btn-outline-primary btn-sm rounded-3 d-flex align-items-center gap-2"
+                  >
+                    <FaEdit />
+                    ویرایش هزینه
+                  </button>
+                </div>
+
+                <div className="fw-semibold mt-2">
                   {suppliesCost.toLocaleString("fa-IR")} تومان
-                </span>
-              </InfoField>
+                </div>
+              </div>
 
               <InfoField
                 icon={<FaBoxOpen size={18} />}
@@ -848,10 +1105,7 @@ class RequestDetailPage extends React.Component {
                 value={request.abzar_details || "—"}
               />
 
-              <InfoField
-                icon={<FaFileInvoice size={18} />}
-                label="کل اجرت"
-              >
+              <InfoField icon={<FaFileInvoice size={18} />} label="کل اجرت">
                 <span className="fw-semibold">
                   {totalFee.toLocaleString("fa-IR")} تومان
                 </span>
@@ -867,25 +1121,36 @@ class RequestDetailPage extends React.Component {
               </InfoField>
 
               {receiptImage && (
-                <div className="d-flex align-items-center justify-content-between gap-3 border rounded-4 px-3 py-3 mb-3 bg-white">
-                  <span className="text-muted">فیش واریزی:</span>
+                <div className="border rounded-4 px-3 py-3 mb-3 bg-white">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <span className="text-muted">فیش واریزی:</span>
 
-                  <img
-                    src={receiptImage}
-                    alt="فیش واریزی"
-                    className="rounded-3 border"
-                    onClick={() =>
-                      this.setState({
-                        showReceiptImage: true,
-                      })
-                    }
-                    style={{
-                      width: 140,
-                      height: 110,
-                      objectFit: "cover",
-                      cursor: "pointer",
-                    }}
-                  />
+                    <button
+                      type="button"
+                      onClick={this.openEditReceiptModal}
+                      className="btn btn-outline-primary btn-sm rounded-3 d-flex align-items-center gap-2"
+                    >
+                      <FaEdit />
+                      ویرایش عکس
+                    </button>
+                  </div>
+
+                  <div className="d-flex justify-content-center">
+                    <img
+                      src={receiptImage}
+                      alt="فیش واریزی"
+                      className="rounded-3 border"
+                      onClick={() =>
+                        this.setState({ showReceiptImage: true })
+                      }
+                      style={{
+                        width: 180,
+                        height: 130,
+                        objectFit: "cover",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -934,25 +1199,140 @@ class RequestDetailPage extends React.Component {
 
           <Link
             to="/form"
-            state={{
-              relatedRequest: request,
-            }}
+            state={{ relatedRequest: request }}
             className="btn btn-primary w-100 rounded-3 py-3 mt-2 text-white text-decoration-none"
           >
             افزودن درخواست مرتبط
           </Link>
         </div>
 
+        {/* مودال ویرایش هزینه لوازم مصرفی */}
+        {showEditSuppliesModal && (
+          <div
+            onClick={this.closeEditSuppliesModal}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10003,
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(event) => event.stopPropagation()}
+              dir="rtl"
+              className="bg-white rounded-4 p-4"
+              style={{
+                width: "100%",
+                maxWidth: 420,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              }}
+            >
+              <div className="d-flex align-items-center justify-content-between mb-4">
+                <h5 className="fw-bold mb-0">ویرایش هزینه لوازم مصرفی</h5>
+
+                <button
+                  type="button"
+                  onClick={this.closeEditSuppliesModal}
+                  disabled={suppliesLoading}
+                  className="btn btn-light rounded-circle"
+                  style={{ width: 36, height: 36 }}
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label text-muted">
+                  کل دریافتی
+                </label>
+                <div className="form-control bg-light rounded-3 py-3">
+                  {totalReceived.toLocaleString("fa-IR")} تومان
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  هزینه لوازم مصرفی (تومان)
+                </label>
+
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={suppliesInput}
+                  onChange={this.handleSuppliesInputChange}
+                  placeholder="مبلغ هزینه لوازم را وارد کنید"
+                  className="form-control rounded-3 py-3"
+                  disabled={suppliesLoading}
+                  autoFocus
+                />
+              </div>
+
+              <div className="border rounded-3 p-3 mb-3 bg-light">
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">کل اجرت:</span>
+                  <strong>
+                    {previewTotalFee.toLocaleString("fa-IR")} تومان
+                  </strong>
+                </div>
+
+                <div className="d-flex justify-content-between">
+                  <span className="text-muted">پورسانت ۵۰٪:</span>
+                  <strong className="text-success">
+                    {previewCommission.toLocaleString("fa-IR")} تومان
+                  </strong>
+                </div>
+              </div>
+
+              <div className="small text-muted mb-3">
+                پورسانت پس از ذخیره، به‌صورت خودکار در سرور محاسبه می‌شود.
+              </div>
+
+              {suppliesError && (
+                <div className="alert alert-danger rounded-3 py-2">
+                  {suppliesError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={this.handleUpdateSupplies}
+                disabled={suppliesLoading || suppliesInput.trim() === ""}
+                className="btn btn-primary w-100 rounded-3 py-3"
+              >
+                {suppliesLoading ? (
+                  "در حال ذخیره..."
+                ) : (
+                  <>
+                    <FaSave className="ms-2" />
+                    ذخیره هزینه
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={this.closeEditSuppliesModal}
+                disabled={suppliesLoading}
+                className="btn btn-light border w-100 rounded-3 py-3 mt-2"
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* نمایش تمام‌صفحه عکس */}
         {showReceiptImage && receiptImage && (
           <div
             className="modal show d-block"
             tabIndex="-1"
             role="dialog"
-            onClick={() =>
-              this.setState({
-                showReceiptImage: false,
-              })
-            }
+            onClick={() => this.setState({ showReceiptImage: false })}
             style={{
               backgroundColor: "rgba(0, 0, 0, 0.95)",
               zIndex: 10000,
@@ -966,9 +1346,7 @@ class RequestDetailPage extends React.Component {
                     className="btn-close btn-close-white"
                     aria-label="بستن"
                     onClick={() =>
-                      this.setState({
-                        showReceiptImage: false,
-                      })
+                      this.setState({ showReceiptImage: false })
                     }
                   />
                 </div>
@@ -978,7 +1356,7 @@ class RequestDetailPage extends React.Component {
                     src={receiptImage}
                     alt="فیش واریزی"
                     className="img-fluid"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
                     style={{
                       maxWidth: "100%",
                       maxHeight: "100%",
@@ -991,6 +1369,128 @@ class RequestDetailPage extends React.Component {
           </div>
         )}
 
+        {/* مودال ویرایش عکس فیش */}
+        {showEditReceiptModal && (
+          <div
+            onClick={this.closeEditReceiptModal}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10002,
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(event) => event.stopPropagation()}
+              dir="rtl"
+              className="bg-white rounded-4 p-4"
+              style={{
+                width: "100%",
+                maxWidth: 420,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              }}
+            >
+              <div className="d-flex align-items-center justify-content-between mb-4">
+                <h5 className="fw-bold mb-0">ویرایش عکس فیش</h5>
+
+                <button
+                  type="button"
+                  onClick={this.closeEditReceiptModal}
+                  disabled={receiptLoading}
+                  className="btn btn-light rounded-circle"
+                  style={{ width: 36, height: 36 }}
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <div className="text-center mb-3">
+                {receiptPreview ? (
+                  <img
+                    src={receiptPreview}
+                    alt="پیش‌نمایش فیش"
+                    className="rounded-3 border"
+                    style={{
+                      width: "100%",
+                      maxHeight: 280,
+                      objectFit: "contain",
+                    }}
+                  />
+                ) : (
+                  <div className="border rounded-3 p-5 text-muted">
+                    <FaImage size={35} />
+                    <div className="mt-2">تصویری انتخاب نشده است.</div>
+                  </div>
+                )}
+              </div>
+
+              <label
+                htmlFor="receiptImageInput"
+                className="btn btn-light border rounded-3 w-100 py-3 mb-3"
+              >
+                <FaImage className="ms-2" />
+                انتخاب عکس جدید
+              </label>
+
+              <input
+                id="receiptImageInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={this.handleReceiptFileChange}
+                disabled={receiptLoading}
+                className="d-none"
+              />
+
+              {receiptFile && (
+                <div className="small text-muted mb-3 text-break">
+                  فایل انتخاب‌شده: {receiptFile.name}
+                </div>
+              )}
+
+              <div className="small text-muted mb-3">
+                فرمت مجاز: JPG، PNG و WEBP؛ حداکثر حجم ۵ مگابایت.
+              </div>
+
+              {receiptError && (
+                <div className="alert alert-danger rounded-3 py-2">
+                  {receiptError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={this.handleUpdateReceiptImage}
+                disabled={receiptLoading || !receiptFile}
+                className="btn btn-primary w-100 rounded-3 py-3"
+              >
+                {receiptLoading ? (
+                  "در حال ذخیره عکس..."
+                ) : (
+                  <>
+                    <FaSave className="ms-2" />
+                    ذخیره عکس جدید
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={this.closeEditReceiptModal}
+                disabled={receiptLoading}
+                className="btn btn-light border w-100 rounded-3 py-3 mt-2"
+              >
+                انصراف
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* مودال تایید تسویه */}
         {showConfirmModal && (
           <div
             onClick={this.closeConfirmModal}
@@ -1005,14 +1505,14 @@ class RequestDetailPage extends React.Component {
             }}
           >
             <div
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
               dir="rtl"
               style={{
                 width: "100%",
                 maxWidth: 450,
                 background: "#fff",
                 borderRadius: "22px 22px 0 0",
-                padding: "18px",
+                padding: 18,
                 boxSizing: "border-box",
                 boxShadow: "0 -5px 30px rgba(0,0,0,0.15)",
               }}
@@ -1027,17 +1527,13 @@ class RequestDetailPage extends React.Component {
                 }}
               />
 
-              <h5 className="fw-semibold mb-3 text-end">
-                تایید تسویه
-              </h5>
+              <h5 className="fw-semibold mb-3 text-end">تایید تسویه</h5>
 
               <input
                 type="text"
                 value={confirmText}
-                onChange={(e) =>
-                  this.setState({
-                    confirmText: e.target.value,
-                  })
+                onChange={(event) =>
+                  this.setState({ confirmText: event.target.value })
                 }
                 placeholder="متن تایید را وارد کنید"
                 className="form-control rounded-3 py-3"
@@ -1066,6 +1562,7 @@ class RequestDetailPage extends React.Component {
           </div>
         )}
 
+        {/* مودال حذف درخواست */}
         {this.state.showDeleteModal && (
           <div
             onClick={this.closeDeleteModal}
@@ -1082,7 +1579,7 @@ class RequestDetailPage extends React.Component {
             }}
           >
             <div
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
               dir="rtl"
               style={{
                 width: "100%",
@@ -1092,7 +1589,6 @@ class RequestDetailPage extends React.Component {
                 padding: 24,
                 boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
                 textAlign: "center",
-                animation: "deleteModalEnter 0.2s ease-out",
               }}
             >
               <div
@@ -1111,16 +1607,11 @@ class RequestDetailPage extends React.Component {
                 <FaTrashAlt size={27} />
               </div>
 
-              <h5 className="fw-bold mb-3 text-danger">
-                حذف درخواست
-              </h5>
+              <h5 className="fw-bold mb-3 text-danger">حذف درخواست</h5>
 
               <p
                 className="text-muted mb-3"
-                style={{
-                  fontSize: 14,
-                  lineHeight: 2,
-                }}
+                style={{ fontSize: 14, lineHeight: 2 }}
               >
                 برای تأیید حذف درخواست شماره{" "}
                 <strong className="text-dark">
@@ -1132,9 +1623,9 @@ class RequestDetailPage extends React.Component {
               <input
                 type="text"
                 value={this.state.deleteConfirmText}
-                onChange={(e) =>
+                onChange={(event) =>
                   this.setState({
-                    deleteConfirmText: e.target.value,
+                    deleteConfirmText: event.target.value,
                     deleteError: "",
                   })
                 }
