@@ -177,11 +177,14 @@ class RequestDetailPage extends React.Component {
       receiptLoading: false,
       receiptError: "",
 
-      // ویرایش هزینه لوازم مصرفی
-      showEditSuppliesModal: false,
-      suppliesInput: "",
-      suppliesLoading: false,
-      suppliesError: "",
+      // ویرایش اطلاعات مالی
+      showEditFinanceModal: false,
+      financeSum: "",
+      financeAbzar: "",
+      financePorsant: "",
+      financeAbzarDetails: "",
+      financeLoading: false,
+      financeError: "",
     };
 
     this.handleBack = this.handleBack.bind(this);
@@ -291,67 +294,85 @@ class RequestDetailPage extends React.Component {
   };
 
   // =========================
-  // ویرایش هزینه لوازم مصرفی
+  // ویرایش اطلاعات مالی
   // =========================
 
-  openEditSuppliesModal = () => {
+  openEditFinanceModal = () => {
     const { request } = this.state;
 
     this.setState({
-      showEditSuppliesModal: true,
-      suppliesInput: String(request?.abzar ?? 0),
-      suppliesError: "",
+      showEditFinanceModal: true,
+      financeSum: String(request?.sum ?? 0),
+      financeAbzar: String(request?.abzar ?? 0),
+      financePorsant: String(request?.porsant ?? 0),
+      financeAbzarDetails: request?.abzar_details || "",
+      financeError: "",
     });
   };
 
-  closeEditSuppliesModal = () => {
-    if (this.state.suppliesLoading) return;
+  closeEditFinanceModal = () => {
+    if (this.state.financeLoading) return;
 
     this.setState({
-      showEditSuppliesModal: false,
-      suppliesInput: "",
-      suppliesError: "",
+      showEditFinanceModal: false,
+      financeError: "",
     });
   };
 
-  handleSuppliesInputChange = (event) => {
-    const value = event.target.value;
-
+  handleFinanceInputChange = (field, value) => {
     if (value !== "" && !/^\d+(\.\d*)?$/.test(value)) {
       return;
     }
 
     this.setState({
-      suppliesInput: value,
-      suppliesError: "",
+      [field]: value,
+      financeError: "",
     });
   };
 
-  handleUpdateSupplies = async () => {
-    const { request, suppliesInput } = this.state;
+  handleUpdateFinance = async () => {
+    const {
+      request,
+      financeSum,
+      financeAbzar,
+      financePorsant,
+      financeAbzarDetails,
+    } = this.state;
 
     if (!request?.id) return;
 
-    if (suppliesInput.trim() === "") {
+    if (
+      financeSum.trim() === "" ||
+      financeAbzar.trim() === "" ||
+      financePorsant.trim() === ""
+    ) {
       this.setState({
-        suppliesError: "هزینه لوازم مصرفی را وارد کنید.",
+        financeError: "لطفاً تمام مبالغ را وارد کنید.",
       });
       return;
     }
 
-    const suppliesCost = Number(suppliesInput);
-    const totalReceived = Number(request.sum || 0);
+    const sum = Number(financeSum);
+    const abzar = Number(financeAbzar);
+    const porsant = Number(financePorsant);
 
-    if (!Number.isFinite(suppliesCost) || suppliesCost < 0) {
+    if (
+      !Number.isFinite(sum) ||
+      !Number.isFinite(abzar) ||
+      !Number.isFinite(porsant) ||
+      sum < 0 ||
+      abzar < 0 ||
+      porsant < 0
+    ) {
       this.setState({
-        suppliesError: "مبلغ واردشده معتبر نیست.",
+        financeError: "مبالغ واردشده معتبر نیستند.",
       });
       return;
     }
 
-    if (suppliesCost > totalReceived) {
+    if (abzar > sum) {
       this.setState({
-        suppliesError: "هزینه لوازم مصرفی نمی‌تواند از کل دریافتی بیشتر باشد.",
+        financeError: "هزینه لوازم مصرفی نمی‌تواند از کل دریافتی بیشتر باشد.",
       });
       return;
     }
@@ -360,14 +381,14 @@ class RequestDetailPage extends React.Component {
 
     if (!token) {
       this.setState({
-        suppliesError: "لطفاً دوباره وارد حساب کاربری شوید.",
+        financeError: "لطفاً دوباره وارد حساب کاربری شوید.",
       });
       return;
     }
 
     this.setState({
-      suppliesLoading: true,
-      suppliesError: "",
+      financeLoading: true,
+      financeError: "",
     });
 
     try {
@@ -381,7 +402,10 @@ class RequestDetailPage extends React.Component {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            abzar: suppliesCost,
+            sum,
+            abzar,
+            porsant,
+            abzar_details: financeAbzarDetails,
           }),
         }
       );
@@ -389,31 +413,23 @@ class RequestDetailPage extends React.Component {
       const data = await response.json();
 
       if (!response.ok || String(data.status) !== "1") {
-        const validationMessage = data.errors?.abzar?.[0];
-
-        throw new Error(
-          validationMessage ||
-            data.message ||
-            "ویرایش هزینه لوازم مصرفی ناموفق بود."
-        );
+        throw new Error(data.message || "ویرایش اطلاعات مالی ناموفق بود.");
       }
 
       this.setState({
-        showEditSuppliesModal: false,
-        suppliesLoading: false,
-        suppliesInput: "",
-        suppliesError: "",
+        showEditFinanceModal: false,
+        financeLoading: false,
+        financeError: "",
       });
 
       await this.getRequestDetail();
 
-      alert(data.message || "هزینه لوازم مصرفی با موفقیت ویرایش شد.");
     } catch (error) {
-      console.error("UPDATE SUPPLIES ERROR:", error);
+      console.error("UPDATE FINANCE ERROR:", error);
 
       this.setState({
-        suppliesLoading: false,
-        suppliesError: error.message || "خطا در ویرایش هزینه لوازم مصرفی.",
+        financeLoading: false,
+        financeError: error.message || "خطا در ویرایش اطلاعات مالی.",
       });
     }
   };
@@ -813,10 +829,13 @@ class RequestDetailPage extends React.Component {
       receiptLoading,
       receiptError,
       receiptFile,
-      showEditSuppliesModal,
-      suppliesInput,
-      suppliesLoading,
-      suppliesError,
+      showEditFinanceModal,
+      financeSum,
+      financeAbzar,
+      financePorsant,
+      financeAbzarDetails,
+      financeLoading,
+      financeError,
     } = this.state;
 
     if (!authenticated) return null;
@@ -846,19 +865,10 @@ class RequestDetailPage extends React.Component {
       : "—";
 
     const requestStatus = getRequestStatus(request, clear);
-
     const totalReceived = Number(request.sum || 0);
     const suppliesCost = Number(request.abzar || 0);
     const totalFee = totalReceived - suppliesCost;
-    const commissionPercent = 50;
     const commissionAmount = totalFee / 2;
-
-    const previewSuppliesCost =
-      suppliesInput.trim() === "" ? 0 : Number(suppliesInput);
-
-    const previewTotalFee = totalReceived - previewSuppliesCost;
-    const previewCommission = previewTotalFee / 2;
-
     const { receiptImage } = this.getReceiptData();
 
     const relatedRequests = Array.isArray(request.siblings)
@@ -870,6 +880,11 @@ class RequestDetailPage extends React.Component {
       Number(request.end) === 1 &&
       Number(request.cleared) === 0 &&
       !!clear;
+
+    const previewSum = Number(financeSum || 0);
+    const previewAbzar = Number(financeAbzar || 0);
+    const previewPorsant = Number(financePorsant || 0);
+    const previewWage = previewSum - previewAbzar;
 
     return (
       <div dir="rtl">
@@ -1070,34 +1085,33 @@ class RequestDetailPage extends React.Component {
 
           {clear && (
             <>
+              <div className="d-flex align-items-center justify-content-between mt-4 mb-3">
+                <h6 className="fw-bold mb-0">اطلاعات مالی درخواست</h6>
+
+                <button
+                  type="button"
+                  onClick={this.openEditFinanceModal}
+                  className="btn btn-outline-primary btn-sm rounded-3 d-flex align-items-center gap-2"
+                >
+                  <FaEdit />
+                  ویرایش اطلاعات مالی
+                </button>
+              </div>
+
               <InfoField icon={<FaCoins size={18} />} label="کل دریافتی">
                 <span className="fw-semibold">
                   {totalReceived.toLocaleString("fa-IR")} تومان
                 </span>
               </InfoField>
 
-              {/* هزینه لوازم مصرفی با امکان ویرایش */}
-              <div className="border rounded-4 px-3 py-3 mb-3 bg-white">
-                <div className="d-flex align-items-center justify-content-between gap-2">
-                  <div className="d-flex align-items-center gap-2">
-                    <FaCoins size={18} className="text-muted" />
-                    <span className="text-muted">هزینه لوازم مصرفی</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={this.openEditSuppliesModal}
-                    className="btn btn-outline-primary btn-sm rounded-3 d-flex align-items-center gap-2"
-                  >
-                    <FaEdit />
-                    ویرایش هزینه
-                  </button>
-                </div>
-
-                <div className="fw-semibold mt-2">
+              <InfoField
+                icon={<FaCoins size={18} />}
+                label="هزینه لوازم مصرفی"
+              >
+                <span className="fw-semibold">
                   {suppliesCost.toLocaleString("fa-IR")} تومان
-                </div>
-              </div>
+                </span>
+              </InfoField>
 
               <InfoField
                 icon={<FaBoxOpen size={18} />}
@@ -1113,7 +1127,7 @@ class RequestDetailPage extends React.Component {
 
               <InfoField
                 icon={<FaFileInvoice size={18} />}
-                label={`پورسانت (%${commissionPercent})`}
+                label="پورسانت"
               >
                 <span className="fw-semibold">
                   {commissionAmount.toLocaleString("fa-IR")} تومان
@@ -1206,10 +1220,10 @@ class RequestDetailPage extends React.Component {
           </Link>
         </div>
 
-        {/* مودال ویرایش هزینه لوازم مصرفی */}
-        {showEditSuppliesModal && (
+        {/* مودال ویرایش اطلاعات مالی */}
+        {showEditFinanceModal && (
           <div
-            onClick={this.closeEditSuppliesModal}
+            onClick={this.closeEditFinanceModal}
             style={{
               position: "fixed",
               inset: 0,
@@ -1220,25 +1234,26 @@ class RequestDetailPage extends React.Component {
               alignItems: "center",
               justifyContent: "center",
               padding: 16,
+              overflowY: "auto",
             }}
           >
             <div
               onClick={(event) => event.stopPropagation()}
               dir="rtl"
-              className="bg-white rounded-4 p-4"
+              className="bg-white rounded-4 p-4 my-auto"
               style={{
                 width: "100%",
-                maxWidth: 420,
+                maxWidth: 450,
                 boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
               }}
             >
               <div className="d-flex align-items-center justify-content-between mb-4">
-                <h5 className="fw-bold mb-0">ویرایش هزینه لوازم مصرفی</h5>
+                <h5 className="fw-bold mb-0">ویرایش اطلاعات مالی</h5>
 
                 <button
                   type="button"
-                  onClick={this.closeEditSuppliesModal}
-                  disabled={suppliesLoading}
+                  onClick={this.closeEditFinanceModal}
+                  disabled={financeLoading}
                   className="btn btn-light rounded-circle"
                   style={{ width: 36, height: 36 }}
                 >
@@ -1247,12 +1262,23 @@ class RequestDetailPage extends React.Component {
               </div>
 
               <div className="mb-3">
-                <label className="form-label text-muted">
-                  کل دریافتی
+                <label className="form-label fw-semibold">
+                  کل دریافتی (تومان)
                 </label>
-                <div className="form-control bg-light rounded-3 py-3">
-                  {totalReceived.toLocaleString("fa-IR")} تومان
-                </div>
+
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={financeSum}
+                  onChange={(event) =>
+                    this.handleFinanceInputChange(
+                      "financeSum",
+                      event.target.value
+                    )
+                  }
+                  className="form-control rounded-3 py-3"
+                  disabled={financeLoading}
+                />
               </div>
 
               <div className="mb-3">
@@ -1263,12 +1289,54 @@ class RequestDetailPage extends React.Component {
                 <input
                   type="text"
                   inputMode="decimal"
-                  value={suppliesInput}
-                  onChange={this.handleSuppliesInputChange}
-                  placeholder="مبلغ هزینه لوازم را وارد کنید"
+                  value={financeAbzar}
+                  onChange={(event) =>
+                    this.handleFinanceInputChange(
+                      "financeAbzar",
+                      event.target.value
+                    )
+                  }
                   className="form-control rounded-3 py-3"
-                  disabled={suppliesLoading}
-                  autoFocus
+                  disabled={financeLoading}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  پورسانت (تومان)
+                </label>
+
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={financePorsant}
+                  onChange={(event) =>
+                    this.handleFinanceInputChange(
+                      "financePorsant",
+                      event.target.value
+                    )
+                  }
+                  className="form-control rounded-3 py-3"
+                  disabled={financeLoading}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  توضیحات لوازم مصرفی
+                </label>
+
+                <textarea
+                  value={financeAbzarDetails}
+                  onChange={(event) =>
+                    this.setState({
+                      financeAbzarDetails: event.target.value,
+                      financeError: "",
+                    })
+                  }
+                  className="form-control rounded-3"
+                  rows="3"
+                  disabled={financeLoading}
                 />
               </div>
 
@@ -1276,48 +1344,44 @@ class RequestDetailPage extends React.Component {
                 <div className="d-flex justify-content-between mb-2">
                   <span className="text-muted">کل اجرت:</span>
                   <strong>
-                    {previewTotalFee.toLocaleString("fa-IR")} تومان
+                    {previewWage.toLocaleString("fa-IR")} تومان
                   </strong>
                 </div>
 
                 <div className="d-flex justify-content-between">
-                  <span className="text-muted">پورسانت ۵۰٪:</span>
+                  <span className="text-muted">پورسانت :</span>
                   <strong className="text-success">
-                    {previewCommission.toLocaleString("fa-IR")} تومان
+                    {previewPorsant.toLocaleString("fa-IR")} تومان
                   </strong>
                 </div>
               </div>
 
-              <div className="small text-muted mb-3">
-                پورسانت پس از ذخیره، به‌صورت خودکار در سرور محاسبه می‌شود.
-              </div>
-
-              {suppliesError && (
+              {financeError && (
                 <div className="alert alert-danger rounded-3 py-2">
-                  {suppliesError}
+                  {financeError}
                 </div>
               )}
 
               <button
                 type="button"
-                onClick={this.handleUpdateSupplies}
-                disabled={suppliesLoading || suppliesInput.trim() === ""}
+                onClick={this.handleUpdateFinance}
+                disabled={financeLoading}
                 className="btn btn-primary w-100 rounded-3 py-3"
               >
-                {suppliesLoading ? (
+                {financeLoading ? (
                   "در حال ذخیره..."
                 ) : (
                   <>
                     <FaSave className="ms-2" />
-                    ذخیره هزینه
+                    ذخیره اطلاعات مالی
                   </>
                 )}
               </button>
 
               <button
                 type="button"
-                onClick={this.closeEditSuppliesModal}
-                disabled={suppliesLoading}
+                onClick={this.closeEditFinanceModal}
+                disabled={financeLoading}
                 className="btn btn-light border w-100 rounded-3 py-3 mt-2"
               >
                 انصراف
